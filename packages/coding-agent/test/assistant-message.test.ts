@@ -3,7 +3,7 @@ import type { TuiMouseEvent } from "@earendil-works/pi-tui";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
 import { UserMessageComponent } from "../src/modes/interactive/components/user-message.ts";
-import { initTheme } from "../src/modes/interactive/theme/theme.ts";
+import { initTheme, theme } from "../src/modes/interactive/theme/theme.ts";
 import { stripAnsi } from "../src/utils/ansi.ts";
 import * as syntaxHighlight from "../src/utils/syntax-highlight.ts";
 
@@ -104,6 +104,31 @@ describe("AssistantMessageComponent", () => {
 
 		expect(rendered).toContain("Thinking...");
 		expect(rendered).toContain("Response was truncated before completion.");
+	});
+
+	test("draws thinking Markdown in the thinking color with its text intact", () => {
+		initTheme("dark");
+		const thinking = [
+			"## Plan",
+			"",
+			"1. Call `get_user_name` and **check** `__init__.py`.",
+			"2. Keep a * b * c and set_user_id, see [docs](https://example.com).",
+			"",
+			"```python",
+			"def set_user_id(): pass",
+			"```",
+		].join("\n");
+
+		const rendered = new AssistantMessageComponent(createAssistantMessage([{ type: "thinking", thinking }]))
+			.render(80)
+			.join("\n");
+		const plain = stripAnsi(rendered);
+
+		expect(new Set(rendered.match(/\u001b\[38;[0-9;]*m/g))).toEqual(new Set([theme.getFgAnsi("thinkingText")]));
+		expect(rendered).not.toContain("\u001b[1m");
+		expect(plain).toContain("1. Call get_user_name and check __init__.py.");
+		expect(plain).toContain("2. Keep a * b * c and set_user_id, see docs (https://example.com).");
+		expect(plain).toContain("def set_user_id(): pass");
 	});
 
 	test("coalesces adjacent thinking blocks into one hidden thinking label", () => {

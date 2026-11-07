@@ -115,6 +115,8 @@ Theme colors describe interface roles rather than individual components. Use the
 | Editor modes | `thinking*`, `bashMode` |
 | HTML export | `export.pageBg`, `export.cardBg`, `export.infoBg` |
 
+Thinking blocks draw all of their Markdown in `thinkingText`, without `md*` colors, bold, or syntax highlighting.
+
 The schema is the format reference. The built-in themes provide complete values that you can copy and adjust.
 
 Five colors are optional and inherit another color when omitted:

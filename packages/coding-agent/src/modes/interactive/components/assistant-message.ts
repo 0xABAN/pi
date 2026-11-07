@@ -18,6 +18,29 @@ const OSC133_ZONE_START = "\x1b]133;A\x07";
 const OSC133_ZONE_END = "\x1b]133;B\x07";
 const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
 
+function thinkingMarkdownTheme(base: MarkdownTheme): MarkdownTheme {
+	const thinking = (text: string) => theme.italic(theme.fg("thinkingText", text));
+	const plain = (text: string) => text;
+	return {
+		...base,
+		heading: thinking,
+		link: thinking,
+		linkUrl: thinking,
+		code: thinking,
+		codeBlock: thinking,
+		codeBlockBorder: thinking,
+		quote: thinking,
+		quoteBorder: thinking,
+		hr: thinking,
+		listBullet: thinking,
+		bold: plain,
+		strikethrough: plain,
+		underline: plain,
+		highlightCode: undefined,
+		codeBlockBackground: undefined,
+	};
+}
+
 /**
  * A Markdown block of the last update. The next update reuses it at the same position for the same kind of content, so
  * a streamed answer keeps the blocks it already rendered, also once the stream ends.
@@ -40,6 +63,7 @@ export class AssistantMessageComponent extends Container implements TranscriptMe
 	private contentContainer: Container;
 	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
+	private thinkingMarkdownTheme: MarkdownTheme;
 	private hiddenThinkingLabel: string;
 	private outputPad: number;
 	private markdownTransformers: readonly MarkdownTransformer[];
@@ -65,6 +89,7 @@ export class AssistantMessageComponent extends Container implements TranscriptMe
 
 		this.hideThinkingBlock = hideThinkingBlock;
 		this.markdownTheme = markdownTheme;
+		this.thinkingMarkdownTheme = thinkingMarkdownTheme(markdownTheme);
 		this.hiddenThinkingLabel = hiddenThinkingLabel;
 		this.outputPad = outputPad;
 		this.markdownTransformers = markdownTransformers;
@@ -227,7 +252,7 @@ export class AssistantMessageComponent extends Container implements TranscriptMe
 									thinking,
 									this.outputPad,
 									0,
-									this.markdownTheme,
+									this.thinkingMarkdownTheme,
 									{
 										color: (text: string) => theme.fg("thinkingText", text),
 										italic: true,
