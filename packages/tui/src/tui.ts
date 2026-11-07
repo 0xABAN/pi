@@ -525,7 +525,7 @@ export abstract class TuiBase extends Container implements TUI {
 	private static readonly MIN_RENDER_INTERVAL_MS = 16;
 	private showHardwareCursor = false;
 	private clearOnShrink = false;
-	private horizontalInset: (width: number) => number = () => 0;
+	protected horizontalInset: (width: number) => number = () => 0;
 	protected fullRedrawCount = 0;
 	protected stopped = false;
 	/**
@@ -559,16 +559,12 @@ export abstract class TuiBase extends Container implements TUI {
 
 	protected abstract doRender(): void;
 
-	protected getHorizontalInset(width: number): number {
-		return this.horizontalInset(width);
-	}
-
 	protected getContentWidth(width: number): number {
-		return width - 2 * this.getHorizontalInset(width);
+		return width - 2 * this.horizontalInset(width);
 	}
 
 	protected insetLines(lines: string[], width: number): string[] {
-		const padding = " ".repeat(this.getHorizontalInset(width));
+		const padding = " ".repeat(this.horizontalInset(width));
 		return lines.map((line) => (line ? padding + line : line));
 	}
 
@@ -1270,7 +1266,7 @@ export abstract class TuiBase extends Container implements TUI {
 		termHeight: number,
 	): { width: number; row: number; col: number; maxHeight: number | undefined } {
 		const opt = options ?? {};
-		const inset = this.getHorizontalInset(termWidth);
+		const inset = this.horizontalInset(termWidth);
 		const contentWidth = this.getContentWidth(termWidth);
 
 		// Parse margin (clamp to non-negative)

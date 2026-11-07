@@ -1678,7 +1678,7 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 	}
 
 	private compositeFlashes(screen: string[], width: number, height: number): string[] {
-		const inset = this.getHorizontalInset(width);
+		const inset = this.horizontalInset(width);
 		const flashLines = this.flashes.render(this.getContentWidth(width)).slice(-height);
 		if (flashLines.length === 0) return screen;
 		const result = [...screen];
@@ -1697,7 +1697,7 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 		const width = Math.max(1, this.terminal.columns);
 		const height = Math.max(1, this.terminal.rows);
 		const root = this.layoutRoot ?? this.implicitScrollView;
-		const inset = this.getHorizontalInset(width);
+		const inset = this.horizontalInset(width);
 		let nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender(), inset);
 		if (this.refreshSearch(nextLayout)) {
 			nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender(), inset);
