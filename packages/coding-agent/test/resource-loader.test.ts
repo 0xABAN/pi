@@ -324,6 +324,45 @@ Project skill`,
 			expect(theme?.sourcePath).toBe(projectThemePath);
 		});
 
+		it("should skip skills whose names are taken by a command or prompt template", async () => {
+			const skillPath = (name: string) => join(agentDir, "skills", name, "SKILL.md");
+			for (const name of ["model", "deploy", "review", "keep"]) {
+				mkdirSync(join(agentDir, "skills", name), { recursive: true });
+				writeFileSync(skillPath(name), `---\nname: ${name}\ndescription: ${name} skill\n---\nBody`);
+			}
+			const extensionPath = join(agentDir, "extensions", "deploy.ts");
+			mkdirSync(join(agentDir, "extensions"), { recursive: true });
+			writeFileSync(
+				extensionPath,
+				`export default function(pi) { pi.registerCommand("deploy", { handler: async () => {} }); }`,
+			);
+			const promptPath = join(agentDir, "prompts", "review.md");
+			mkdirSync(join(agentDir, "prompts"), { recursive: true });
+			writeFileSync(promptPath, "Review this");
+
+			const loader = new DefaultResourceLoader({ cwd, agentDir });
+			await loader.reload();
+
+			expect(loader.getSkills().skills.map((skill) => skill.name)).toEqual(["keep"]);
+			expect(loader.getSkills().diagnostics.filter((diagnostic) => diagnostic.type === "error")).toEqual([
+				{
+					type: "error",
+					message: `name "deploy" is also the command /deploy from ${extensionPath}; rename one. The skill is not loaded.`,
+					path: skillPath("deploy"),
+				},
+				{
+					type: "error",
+					message: 'name "model" is also the built-in command /model; rename one. The skill is not loaded.',
+					path: skillPath("model"),
+				},
+				{
+					type: "error",
+					message: `name "review" is also the prompt template ${promptPath}; rename one. The skill is not loaded.`,
+					path: skillPath("review"),
+				},
+			]);
+		});
+
 		it("should load symlinked user and project extensions once", async () => {
 			const sharedExtDir = join(tempDir, "shared-extensions");
 			mkdirSync(sharedExtDir, { recursive: true });

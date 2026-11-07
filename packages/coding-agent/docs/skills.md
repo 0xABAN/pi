@@ -85,7 +85,7 @@ Names use lowercase letters, numbers, and hyphens, with no leading, trailing, or
 
 Pi neither requires nor warns when the declared name differs from the parent directory. Other Agent Skills implementations may enforce that requirement, so matching names remain the portable choice.
 
-Malformed `SKILL.md` files and declared skills without descriptions are not loaded. Name collisions keep the first discovered skill and produce a warning.
+Malformed `SKILL.md` files and declared skills without descriptions are not loaded. Name collisions keep the first discovered skill and produce a warning. Because skills are typed as `/name`, a skill's name must also differ from every built-in command, extension command, and prompt template. A skill whose name is taken is not loaded, and startup reports an error naming both. Commands that an extension registers after startup are not checked.
 
 ## Validate and share a skill
 

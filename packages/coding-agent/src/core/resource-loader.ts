@@ -36,6 +36,7 @@ import { loadPromptTemplates } from "./prompt-templates.ts";
 import { SettingsManager } from "./settings-manager.ts";
 import type { Skill } from "./skills.ts";
 import { loadSkills } from "./skills.ts";
+import { BUILTIN_SLASH_COMMANDS } from "./slash-commands.ts";
 import {
 	BUILTIN_PATH_PREFIX,
 	createSourceInfo,
@@ -521,6 +522,10 @@ export class DefaultResourceLoader implements ResourceLoader {
 			this.updatePromptsFromPaths(this.lastPromptPaths, this.resourceMetadataByPath);
 		}
 
+		if (skillPaths.length > 0 || promptPaths.length > 0) {
+			this.dropSkillsWithTakenNames();
+		}
+
 		if (themePaths.length > 0) {
 			this.lastThemePaths = this.mergePaths(
 				this.lastThemePaths,
@@ -661,6 +666,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 				}
 			}
 		}
+		this.dropSkillsWithTakenNames();
 
 		const themePaths = this.noThemes
 			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
@@ -898,6 +904,32 @@ export class DefaultResourceLoader implements ResourceLoader {
 				this.getDefaultSourceInfoForPath(skill.filePath),
 		}));
 		this.skillDiagnostics = resolvedSkills.diagnostics;
+	}
+
+	private dropSkillsWithTakenNames(): void {
+		const owners = new Map<string, string>();
+		for (const command of BUILTIN_SLASH_COMMANDS) {
+			owners.set(command.name, `the built-in command /${command.name}`);
+		}
+		for (const extension of this.extensionsResult.extensions) {
+			for (const name of extension.commands.keys()) {
+				owners.set(name, `the command /${name} from ${extension.path}`);
+			}
+		}
+		for (const prompt of this.prompts) {
+			owners.set(prompt.name, `the prompt template ${prompt.filePath}`);
+		}
+
+		this.skills = this.skills.filter((skill) => {
+			const owner = owners.get(skill.name);
+			if (!owner) return true;
+			this.skillDiagnostics.push({
+				type: "error",
+				message: `name "${skill.name}" is also ${owner}; rename one. The skill is not loaded.`,
+				path: skill.filePath,
+			});
+			return false;
+		});
 	}
 
 	private updatePromptsFromPaths(promptPaths: string[], metadataByPath?: Map<string, PathMetadata>): void {
