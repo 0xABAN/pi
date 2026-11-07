@@ -506,6 +506,7 @@ interface MarkdownTheme {
   strikethrough: (text: string) => string;
   underline: (text: string) => string;
   highlightCode?: (code: string, lang?: string) => string[];
+  codeBlockBackground?: (text: string) => string;
 }
 
 interface DefaultTextStyle {
@@ -531,6 +532,7 @@ md.setText("Updated markdown");
 - Headings, bold, italic, code blocks, lists, links, blockquotes
 - HTML tags rendered as plain text
 - Optional syntax highlighting via `highlightCode`
+- Optional code panels via `codeBlockBackground`: top-level code blocks render without fences, as full-width rows in that background with a blank row above and below
 - Padding support
 - Render caching for performance
 

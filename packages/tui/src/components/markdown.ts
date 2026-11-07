@@ -248,6 +248,7 @@ export interface MarkdownTheme {
 	highlightCode?: (code: string, lang?: string) => string[];
 	/** Prefix applied to each rendered code block line (default: "  ") */
 	codeBlockIndent?: string;
+	codeBlockBackground?: (text: string) => string;
 }
 
 export interface MarkdownOptions {
@@ -419,6 +420,23 @@ export class Markdown implements Component {
 		contentWidth: number,
 	): void {
 		this.blockHighlightedCode = block.highlightedCode;
+		const codeBackground = token.type === "code" ? this.theme.codeBlockBackground : undefined;
+		const lines = codeBackground
+			? this.renderCodePanel(token as Tokens.Code, nextTokenType, width, contentWidth, codeBackground)
+			: this.renderWrappedToken(token, nextTokenType, width, contentWidth);
+		this.blockHighlightedCode = undefined;
+		flattenLines(lines);
+		block.lines = lines;
+		block.width = width;
+		block.nextTokenType = nextTokenType;
+	}
+
+	private renderWrappedToken(
+		token: Token,
+		nextTokenType: string | undefined,
+		width: number,
+		contentWidth: number,
+	): string[] {
 		const leftMargin = " ".repeat(this.paddingX);
 		const rightMargin = " ".repeat(this.paddingX);
 		const bgFn = this.defaultTextStyle?.bgColor;
@@ -439,11 +457,48 @@ export class Markdown implements Component {
 				}
 			}
 		}
-		this.blockHighlightedCode = undefined;
-		flattenLines(lines);
-		block.lines = lines;
-		block.width = width;
-		block.nextTokenType = nextTokenType;
+		return lines;
+	}
+
+	private renderCodePanel(
+		token: Tokens.Code,
+		nextTokenType: string | undefined,
+		width: number,
+		contentWidth: number,
+		background: (text: string) => string,
+	): string[] {
+		const indent = this.theme.codeBlockIndent ?? "  ";
+		const codeWidth = Math.max(1, contentWidth - 2 * visibleWidth(indent));
+		const margin = " ".repeat(this.paddingX);
+		const panelRow = (text: string) => applyBackgroundToLine(margin + text + margin, width, background);
+
+		const lines = [panelRow("")];
+		for (const codeLine of this.renderCodeLines(token)) {
+			for (const wrappedLine of wrapTextWithAnsi(codeLine, codeWidth)) {
+				lines.push(panelRow(indent + wrappedLine));
+			}
+		}
+		lines.push(panelRow(""));
+
+		if (nextTokenType && nextTokenType !== "space") {
+			const bgFn = this.defaultTextStyle?.bgColor;
+			const spacer = " ".repeat(width);
+			lines.push(bgFn ? applyBackgroundToLine(spacer, width, bgFn) : spacer);
+		}
+		return lines;
+	}
+
+	private renderCodeLines(token: Tokens.Code): string[] {
+		if (!this.theme.highlightCode) {
+			return token.text.split("\n").map((codeLine) => this.theme.codeBlock(codeLine));
+		}
+		const key = `${token.lang ?? ""}\0${token.text}`;
+		let highlighted = this.blockHighlightedCode?.get(key);
+		if (!highlighted) {
+			highlighted = this.theme.highlightCode(token.text, token.lang);
+			this.blockHighlightedCode?.set(key, highlighted);
+		}
+		return highlighted;
 	}
 
 	/**
@@ -602,22 +657,8 @@ export class Markdown implements Component {
 			case "code": {
 				const indent = this.theme.codeBlockIndent ?? "  ";
 				lines.push(this.theme.codeBlockBorder(`\`\`\`${token.lang || ""}`));
-				if (this.theme.highlightCode) {
-					const key = `${token.lang ?? ""}\0${token.text}`;
-					let highlighted = this.blockHighlightedCode?.get(key);
-					if (!highlighted) {
-						highlighted = this.theme.highlightCode(token.text, token.lang);
-						this.blockHighlightedCode?.set(key, highlighted);
-					}
-					for (const hlLine of highlighted) {
-						lines.push(`${indent}${hlLine}`);
-					}
-				} else {
-					// Split code by newlines and style each line
-					const codeLines = token.text.split("\n");
-					for (const codeLine of codeLines) {
-						lines.push(`${indent}${this.theme.codeBlock(codeLine)}`);
-					}
+				for (const codeLine of this.renderCodeLines(token as Tokens.Code)) {
+					lines.push(`${indent}${codeLine}`);
 				}
 				lines.push(this.theme.codeBlockBorder("```"));
 				if (nextTokenType && nextTokenType !== "space") {
