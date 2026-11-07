@@ -1,6 +1,8 @@
 import { Container, Markdown, type MarkdownTheme } from "@earendil-works/pi-tui";
 import type { MarkdownTransformer } from "../../../core/extensions/types.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
+import { MessageSeparator, SpeakerHeader } from "../transcript/message-chrome.ts";
+import type { TranscriptLayout, TranscriptMessage } from "../transcript/transcript-container.ts";
 import { createMarkdownTransform } from "./markdown-transform.ts";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";
@@ -10,13 +12,18 @@ const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
 /**
  * Component that renders a user message
  */
-export class UserMessageComponent extends Container {
+export class UserMessageComponent extends Container implements TranscriptMessage {
+	readonly transcriptRole = "user";
 	private text: string;
 	private markdownTheme: MarkdownTheme;
 	private outputPad: number;
 	private markdownTransformers: readonly MarkdownTransformer[];
 	private messageId?: string;
 	private timestamp?: string;
+	private sentAt?: number;
+	private transcriptLayout?: TranscriptLayout;
+	private readonly header = new SpeakerHeader("You");
+	private readonly separator = new MessageSeparator();
 
 	constructor(
 		text: string,
@@ -25,6 +32,7 @@ export class UserMessageComponent extends Container {
 		markdownTransformers: readonly MarkdownTransformer[] = [],
 		messageId?: string,
 		timestamp?: string,
+		sentAt?: number,
 	) {
 		super();
 		this.text = text;
@@ -33,6 +41,7 @@ export class UserMessageComponent extends Container {
 		this.markdownTransformers = markdownTransformers;
 		this.messageId = messageId;
 		this.timestamp = timestamp;
+		this.sentAt = sentAt;
 		this.rebuild();
 	}
 
@@ -41,19 +50,37 @@ export class UserMessageComponent extends Container {
 		this.rebuild();
 	}
 
+	setTranscriptLayout(layout: TranscriptLayout): void {
+		const firstLayout = this.transcriptLayout === undefined;
+		this.transcriptLayout = layout;
+		this.header.update({
+			visible: layout.showHeader,
+			leadingBlank: false,
+			padding: layout.headerPadding,
+			timestamp: this.sentAt,
+		});
+		this.separator.setPadding(layout.bodyPadding);
+
+		if (firstLayout || layout.bodyPadding !== this.outputPad) {
+			this.setOutputPad(layout.bodyPadding);
+		}
+	}
+
 	private rebuild(): void {
 		this.clear();
+		const inTranscript = this.transcriptLayout !== undefined;
+		if (inTranscript) this.addChild(this.header);
 		// The Markdown pads and colors its own background: a Box around it would keep a second full-width copy of every
 		// line, with identical output.
 		this.addChild(
 			new Markdown(
 				this.text,
 				this.outputPad,
-				1,
+				inTranscript ? 0 : 1,
 				this.markdownTheme,
 				{
 					color: (content: string) => theme.fg("userMessageText", content),
-					bgColor: (content: string) => theme.bg("userMessageBg", content),
+					bgColor: inTranscript ? undefined : (content: string) => theme.bg("userMessageBg", content),
 				},
 				{
 					preserveOrderedListMarkers: true,
@@ -68,6 +95,7 @@ export class UserMessageComponent extends Container {
 				},
 			),
 		);
+		if (inTranscript) this.addChild(this.separator);
 	}
 
 	override render(width: number): string[] {

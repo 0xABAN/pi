@@ -202,6 +202,7 @@ import {
 	theme,
 } from "./theme/theme.ts";
 import { InteractiveThemeController } from "./theme/theme-controller.ts";
+import { TranscriptContainer } from "./transcript/transcript-container.ts";
 import { createInteractiveTui, createInteractiveTuiReference } from "./tui-renderer.ts";
 
 export { createInteractiveTui, createInteractiveTuiReference } from "./tui-renderer.ts";
@@ -642,7 +643,10 @@ export class InteractiveMode {
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
 		this.headerContainer = new Container();
 		this.loadedResourcesContainer = new Container();
-		this.chatContainer = new Container();
+		this.chatContainer = new TranscriptContainer(
+			() => this.outputPad,
+			() => this.ui.terminal.rows,
+		);
 		this.documentContainer = new Container();
 		this.documentContainer.addChild(this.headerContainer);
 		this.documentContainer.addChild(this.loadedResourcesContainer);
@@ -4026,6 +4030,7 @@ export class InteractiveMode {
 								this.getMarkdownTransformers(),
 								options?.messageId,
 								options?.timestamp,
+								message.timestamp,
 							);
 							this.chatContainer.addChild(userComponent);
 						}
@@ -4037,6 +4042,7 @@ export class InteractiveMode {
 							this.getMarkdownTransformers(),
 							options?.messageId,
 							options?.timestamp,
+							message.timestamp,
 						);
 						this.chatContainer.addChild(userComponent);
 					}

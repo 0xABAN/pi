@@ -18,6 +18,7 @@ export type { ToolRenderers };
 import { formatToolCallWithArgs, getTextOutput as getRenderedTextOutput } from "../../../core/tools/render-utils.ts";
 import { ensurePngTranscoder } from "../../../utils/image-convert.ts";
 import { theme } from "../theme/theme.ts";
+import type { TranscriptTool } from "../transcript/transcript-container.ts";
 import { keyHint, keyText } from "./keybinding-hints.ts";
 
 const FALLBACK_PREVIEW_LINES = 10;
@@ -28,7 +29,8 @@ export interface ToolExecutionOptions {
 	outputPad?: number;
 }
 
-export class ToolExecutionComponent extends Container {
+export class ToolExecutionComponent extends Container implements TranscriptTool {
+	readonly transcriptRole = "tool";
 	private contentBox: Box;
 	private contentText: Text;
 	private contentTextRegion: MouseRegion;

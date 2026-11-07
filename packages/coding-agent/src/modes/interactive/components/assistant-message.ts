@@ -10,6 +10,8 @@ import {
 } from "@earendil-works/pi-tui";
 import type { MarkdownTransformer } from "../../../core/extensions/types.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
+import { SpeakerHeader } from "../transcript/message-chrome.ts";
+import type { TranscriptLayout, TranscriptMessage } from "../transcript/transcript-container.ts";
 import { createMarkdownTransform } from "./markdown-transform.ts";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";
@@ -28,7 +30,13 @@ interface MarkdownSlot {
 /**
  * Component that renders a complete assistant message
  */
-export class AssistantMessageComponent extends Container {
+export class AssistantMessageComponent extends Container implements TranscriptMessage {
+	readonly transcriptRole = "pi";
+	private readonly header = new SpeakerHeader("Pi");
+	private readonly leadingSpacer: Component = {
+		render: () => (this.header.visible ? [] : [""]),
+		invalidate: () => {},
+	};
 	private contentContainer: Container;
 	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
@@ -65,6 +73,7 @@ export class AssistantMessageComponent extends Container {
 
 		// Container for text/thinking content
 		this.contentContainer = new Container();
+		this.addChild(this.header);
 		this.addChild(this.contentContainer);
 
 		if (message) {
@@ -103,6 +112,18 @@ export class AssistantMessageComponent extends Container {
 		}
 	}
 
+	setTranscriptLayout(layout: TranscriptLayout): void {
+		if (layout.bodyPadding !== this.outputPad) {
+			this.setOutputPad(layout.bodyPadding);
+		}
+		this.header.update({
+			visible: layout.showHeader && (this.contentContainer.children.length > 0 || this.hasToolCalls),
+			leadingBlank: !layout.tight,
+			padding: layout.headerPadding,
+			timestamp: this.lastMessage?.timestamp,
+		});
+	}
+
 	override render(width: number): string[] {
 		const lines = super.render(width);
 		if (this.hasToolCalls || lines.length === 0) {
@@ -136,7 +157,9 @@ export class AssistantMessageComponent extends Container {
 		let needsSpacer = true;
 		const addVisibleChild = (child: Component) => {
 			if (needsSpacer) {
-				this.contentContainer.addChild(new Spacer(1));
+				this.contentContainer.addChild(
+					this.contentContainer.children.length === 0 ? this.leadingSpacer : new Spacer(1),
+				);
 				needsSpacer = false;
 			}
 			this.contentContainer.addChild(child);
