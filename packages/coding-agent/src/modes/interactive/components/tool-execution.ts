@@ -28,8 +28,6 @@ import {
 import type { TranscriptTool, TranscriptToolLayout } from "../transcript/transcript-container.ts";
 import { keyHint, keyText } from "./keybinding-hints.ts";
 
-const FALLBACK_PREVIEW_LINES = 10;
-
 export interface ToolExecutionOptions {
 	showImages?: boolean;
 	imageWidthCells?: number;
@@ -42,7 +40,6 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	private contentText: Text;
 	private contentTextRegion: MouseRegion;
 	private selfRenderContainer: Container;
-	private selfRenderTop = 1;
 	private selfRenderHeight = 0;
 	private callRendererComponent?: Component;
 	private resultRendererComponent?: Component;
@@ -73,7 +70,6 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		durationMs?: number;
 	};
 	private hideComponent = false;
-	private readonly outputGap = new Spacer(1);
 	private transcriptLayout?: TranscriptToolLayout;
 	private transcriptIndent = "";
 	private branch?: ToolBranch;
@@ -101,8 +97,6 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		this.outputPad = options.outputPad ?? 1;
 		this.ui = ui;
 		this.cwd = cwd;
-
-		this.addChild(this.outputGap);
 
 		// Always create all shell variants. contentBox is used for default renderer-based composition.
 		// selfRenderContainer is used when the tool renders its own framing.
@@ -138,7 +132,6 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	setTranscriptLayout(layout: TranscriptToolLayout): void {
 		const previous = this.transcriptLayout;
 		this.transcriptLayout = layout;
-		this.outputGap.setLines(0);
 		if (
 			previous?.index === layout.index &&
 			previous.groupSize === layout.groupSize &&
@@ -206,13 +199,10 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 			return undefined;
 		}
 
-		const lines = output.split("\n");
-		const displayLines = this.expanded ? lines : lines.slice(0, FALLBACK_PREVIEW_LINES);
-		const remaining = lines.length - displayLines.length;
-		let text = displayLines.map((line) => theme.fg("toolOutput", line)).join("\n");
-		if (remaining > 0) {
-			text += `${theme.fg("muted", `\n... (${remaining} more lines,`)} ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`;
-		}
+		const text = output
+			.split("\n")
+			.map((line) => theme.fg("toolOutput", line))
+			.join("\n");
 		return new Text(text, 0, 0);
 	}
 
@@ -288,7 +278,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	override render(width: number): string[] {
 		if (this.argsPending) this.updateDisplay();
-		return this.transcriptLayout ? this.transcriptView.render(width) : this.renderBlock(width);
+		return this.transcriptView.render(width);
 	}
 
 	private renderBlock(width: number): string[] {
@@ -303,14 +293,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 				return [];
 			}
 
-			const lines: string[] = [];
-			if (contentLines.length > 0) {
-				lines.push(...this.outputGap.render(width));
-				this.selfRenderTop = lines.length;
-				lines.push(...contentLines);
-			}
-			lines.push(...this.renderImages(width));
-			return lines;
+			return [...contentLines, ...this.renderImages(width)];
 		}
 
 		return super.render(width);
@@ -386,17 +369,13 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	}
 
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
-		return this.transcriptLayout ? this.transcriptView.handleMouse(event) : this.handleBlockMouse(event);
+		return this.transcriptView.handleMouse(event);
 	}
 
 	private handleBlockMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.hasRendererDefinition() || this.getRenderShell() !== "self") return super.handleMouse(event);
-		if (event.y < this.selfRenderTop || event.y >= this.selfRenderTop + this.selfRenderHeight) return undefined;
-		return this.selfRenderContainer.handleMouse({
-			...event,
-			y: event.y - this.selfRenderTop,
-			height: this.selfRenderHeight,
-		});
+		if (event.y >= this.selfRenderHeight) return undefined;
+		return this.selfRenderContainer.handleMouse({ ...event, height: this.selfRenderHeight });
 	}
 
 	private updateDisplay(): void {

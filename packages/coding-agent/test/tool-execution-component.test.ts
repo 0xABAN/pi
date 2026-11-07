@@ -1,9 +1,7 @@
-import { join, resolve } from "node:path";
 import { resetCapabilitiesCache, setCapabilities, Text, type TUI, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { getReadmePath } from "../src/config.ts";
 import type { ToolDefinition } from "../src/core/extensions/types.ts";
 import { type BashOperations, createBashToolDefinition } from "../src/core/tools/bash.ts";
 import { createReadTool, createReadToolDefinition } from "../src/core/tools/read.ts";
@@ -81,6 +79,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		expect(stripAnsi(component.render(120).join("\n"))).toContain("custom call");
 
 		component.updateResult(
@@ -97,7 +96,7 @@ describe("ToolExecutionComponent parity", () => {
 		expect(rendered).toContain("custom result");
 	});
 
-	test("self-rendered empty tool rows take no layout space", () => {
+	test("self-rendered empty output adds no lines below the row", () => {
 		const toolDefinition: ToolDefinition = {
 			...createBaseToolDefinition(),
 			renderShell: "self",
@@ -114,7 +113,8 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
-		expect(component.render(120)).toEqual([]);
+		component.setExpanded(true);
+		expect(component.render(120)).toHaveLength(1);
 
 		component.updateResult(
 			{
@@ -125,7 +125,7 @@ describe("ToolExecutionComponent parity", () => {
 			false,
 		);
 
-		expect(component.render(120)).toEqual([]);
+		expect(component.render(120)).toHaveLength(1);
 	});
 
 	test("uses built-in rendering for built-in overrides without custom renderers", () => {
@@ -142,6 +142,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [], details: { diff: "+1 after", firstChangedLine: 1 }, isError: false });
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("edit");
@@ -245,6 +246,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.markExecutionStarted();
 		component.updateResult({ content: [], isError: false }, true);
 
@@ -276,6 +278,7 @@ describe("ToolExecutionComponent parity", () => {
 				createFakeTui(),
 				process.cwd(),
 			);
+			component.setExpanded(true);
 			if (live) {
 				component.markExecutionStarted();
 				component.updateResult({ content: [], isError: false }, true);
@@ -299,6 +302,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "hello" }], details: undefined, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered.match(/\bread\b/g)?.length ?? 0).toBe(1);
@@ -315,6 +319,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("read src/example.ts");
 		expect(rendered).not.toContain("src/example.ts:");
@@ -357,6 +362,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "hello" }], details: undefined, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("read");
@@ -379,6 +385,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "hello" }], details: undefined, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("override call");
@@ -402,6 +409,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "hello" }], details: undefined, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("wrapped override call");
@@ -430,6 +438,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("custom call shared-token");
@@ -453,6 +462,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("arg:bar");
@@ -485,36 +495,6 @@ describe("ToolExecutionComponent parity", () => {
 		expect(expandedLines[textLine + 1]).toMatch(/^\s+ {4}line two$/);
 	});
 
-	test("collapses fallback results until expanded", () => {
-		const toolDefinition: ToolDefinition = {
-			...createBaseToolDefinition(),
-		};
-
-		const component = new ToolExecutionComponent(
-			"custom_tool",
-			"tool-6",
-			{ foo: "bar" },
-			{},
-			toolDefinition,
-			createFakeTui(),
-			process.cwd(),
-		);
-		const output = Array.from({ length: 15 }, (_, index) => `line-${index + 1}`).join("\n");
-		component.updateResult({ content: [{ type: "text", text: output }], details: {}, isError: false }, false);
-
-		const collapsed = stripAnsi(component.render(120).join("\n"));
-		expect(collapsed).toContain("custom_tool");
-		expect(collapsed).toContain("line-10");
-		expect(collapsed).not.toContain("line-11");
-		expect(collapsed).toContain("5 more lines");
-		expect(collapsed).toContain("to expand");
-
-		component.setExpanded(true);
-		const expanded = stripAnsi(component.render(120).join("\n"));
-		expect(expanded).toContain("line-15");
-		expect(expanded).not.toContain("more lines");
-	});
-
 	test("trims trailing blank display lines from write previews", () => {
 		const component = new ToolExecutionComponent(
 			"write",
@@ -525,6 +505,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("one");
 		expect(rendered).toContain("two");
@@ -545,6 +526,7 @@ describe("ToolExecutionComponent parity", () => {
 		let renderRequests = 0;
 		const tui = { requestRender: () => renderRequests++ } as unknown as TUI;
 		const component = new ToolExecutionComponent("write", "tool-9", {}, {}, counted, tui, ".");
+		component.setExpanded(true);
 		const lines = Array.from({ length: 200 }, (_, index) => `const line${index} = ${index};`);
 		const callsBefore = renderCalls;
 		let content = "";
@@ -567,6 +549,7 @@ describe("ToolExecutionComponent parity", () => {
 			tui,
 			".",
 		);
+		direct.setExpanded(true);
 		expect(streamed).toBe(stripAnsi(direct.render(120).join("\n")));
 
 		// More deltas before the next frame: one more renderer run, which shows them all.
@@ -575,10 +558,10 @@ describe("ToolExecutionComponent parity", () => {
 		component.updateArgs(final);
 		const next = stripAnsi(component.render(120).join("\n"));
 		expect(renderCalls - callsBefore).toBe(2);
-		expect(next).toContain("201 total");
-		expect(next).toBe(
-			stripAnsi(new ToolExecutionComponent("write", "t", final, {}, write, tui, ".").render(120).join("\n")),
-		);
+		expect(next).toContain("const tail = 2;");
+		const finalComponent = new ToolExecutionComponent("write", "t", final, {}, write, tui, ".");
+		finalComponent.setExpanded(true);
+		expect(next).toBe(stripAnsi(finalComponent.render(120).join("\n")));
 		// Rendering again without new arguments does not run the renderer.
 		component.render(120);
 		expect(renderCalls - callsBefore).toBe(2);
@@ -615,6 +598,7 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 			process.cwd(),
 		);
+		component.setExpanded(true);
 		const error = "Offset 120 is beyond end of file (96 lines total)";
 		component.updateResult({ content: [{ type: "text", text: error }], details: undefined, isError: true }, false);
 
@@ -675,7 +659,6 @@ describe("ToolExecutionComponent parity", () => {
 		);
 
 		const collapsed = stripAnsi(component.render(120).join("\n"));
-		expect(collapsed).toContain("read");
 		expect(collapsed).toContain("notes.txt");
 		expect(collapsed).not.toContain("hidden content");
 
@@ -683,95 +666,4 @@ describe("ToolExecutionComponent parity", () => {
 		const expanded = stripAnsi(component.render(120).join("\n"));
 		expect(expanded).toContain("hidden content");
 	});
-
-	for (const scenario of [
-		{
-			title: "SKILL.md",
-			path: join(process.cwd(), "attio", "SKILL.md"),
-			content: "---\nname: attio\ndescription: CRM helper\n---\n\n# Hidden skill instructions",
-			compact: "[skill] attio",
-			hidden: "Hidden skill instructions",
-			absent: "read skill attio",
-		},
-		{
-			title: "AGENTS.md",
-			path: join(process.cwd(), ".pi", "AGENTS.md"),
-			content: "Hidden resource instructions",
-			compact: "read resource .pi/AGENTS.md",
-			hidden: "Hidden resource instructions",
-			absent: undefined,
-		},
-		{
-			title: "AGENTS.override.md",
-			path: join(process.cwd(), ".pi", "AGENTS.override.md"),
-			content: "Hidden override instructions",
-			compact: "read resource .pi/AGENTS.override.md",
-			hidden: "Hidden override instructions",
-			absent: undefined,
-		},
-		{
-			title: "outside AGENTS.md",
-			path: resolve(process.cwd(), "..", "AGENTS.md"),
-			content: "Hidden outside resource instructions",
-			compact: `read resource ${resolve(process.cwd(), "..", "AGENTS.md").replace(/\\/g, "/")}`,
-			hidden: "Hidden outside resource instructions",
-			absent: undefined,
-		},
-		{
-			title: "Pi documentation",
-			path: getReadmePath(),
-			content: "Hidden docs content",
-			compact: "read docs README.md",
-			hidden: "Hidden docs content",
-			absent: undefined,
-		},
-	] as const) {
-		test(`renders ${scenario.title} read results compactly until expanded`, () => {
-			const component = new ToolExecutionComponent(
-				"read",
-				`tool-compact-${scenario.title}`,
-				{ path: scenario.path },
-				{},
-				createReadToolDefinition(process.cwd()),
-				createFakeTui(),
-				process.cwd(),
-			);
-			component.updateResult(
-				{ content: [{ type: "text", text: scenario.content }], details: undefined, isError: false },
-				false,
-			);
-
-			const collapsed = stripAnsi(component.render(120).join("\n"));
-			expect(collapsed).toContain(scenario.compact);
-			expect(collapsed).not.toContain(scenario.hidden);
-			if (scenario.absent) {
-				expect(collapsed).not.toContain(scenario.absent);
-			}
-
-			component.setExpanded(true);
-			const expanded = stripAnsi(component.render(120).join("\n"));
-			expect(expanded).toContain(scenario.hidden);
-		});
-	}
-
-	for (const scenario of [
-		{ title: "SKILL.md", path: join(process.cwd(), "attio", "SKILL.md"), compact: "[skill] attio:120-329" },
-		{ title: "Pi documentation", path: getReadmePath(), compact: "read docs README.md:120-329" },
-	] as const) {
-		test(`shows the read line range in compact ${scenario.title} reads before the expand hint`, () => {
-			const component = new ToolExecutionComponent(
-				"read",
-				`tool-compact-range-${scenario.title}`,
-				{ path: scenario.path, offset: 120, limit: 210 },
-				{},
-				createReadToolDefinition(process.cwd()),
-				createFakeTui(),
-				process.cwd(),
-			);
-
-			const collapsed = stripAnsi(component.render(120).join("\n"));
-			expect(collapsed).toContain(scenario.compact);
-			expect(collapsed.indexOf(":120-329")).toBeLessThan(collapsed.indexOf("to expand"));
-		});
-	}
 });

@@ -120,6 +120,7 @@ describe("codemode renderer", () => {
 		vi.setSystemTime(0);
 		const tui = { requestRender: () => {} } as unknown as TUI;
 		const component = new ToolExecutionComponent("codemode", "call", { code: "" }, {}, codemodeRenderers, tui, "/");
+		component.setExpanded(true);
 		const text = () => stripVTControlCharacters(component.render(120).join("\n"));
 		component.markExecutionStarted();
 		component.updateResult({ content: [], details: { calls: [] }, isError: false }, true);

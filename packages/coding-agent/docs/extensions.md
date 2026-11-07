@@ -2633,8 +2633,7 @@ Custom editors and `ctx.ui.custom()` components receive `keybindings: Keybinding
 - Use `Text` with padding `(0, 0)`. The default Box handles padding.
 - Use `\n` for multi-line content.
 - Handle `isPartial` for streaming progress.
-- Support `expanded` for detail on demand.
-- Keep default view compact.
+- Put the collapsed view in `summarize`. The transcript draws `renderCall` and `renderResult` only below an expanded row.
 - Read `context.args` in `renderResult` instead of copying args into `context.state`.
 - Use `context.state` only for data that must be shared across call and result slots.
 - Reuse `context.lastComponent` when the same component instance can be updated in place.

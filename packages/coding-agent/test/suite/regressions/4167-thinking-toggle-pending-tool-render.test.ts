@@ -78,7 +78,7 @@ function createFakeInteractiveModeThis(): RenderSessionContextThis {
 		},
 		sessionManager: { getCwd: () => process.cwd(), getEntries: () => [] },
 		session: { retryAttempt: 0, modelRegistry: { find: () => undefined } },
-		toolOutputExpanded: false,
+		toolOutputExpanded: true,
 		isInitialized: true,
 		updateEditorBorderColor: vi.fn(),
 		getRegisteredToolDefinition: (_toolName: string) => undefined,
