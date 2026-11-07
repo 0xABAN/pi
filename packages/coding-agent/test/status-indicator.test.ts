@@ -18,11 +18,15 @@ describe("status indicators", () => {
 	});
 
 	it("keeps idle status at the same height as standalone status indicators", () => {
+		initTheme("dark");
 		const idleStatus = new IdleStatus();
 
 		const lines = idleStatus.render(20);
-		expect(lines).toHaveLength(2);
-		expect(lines).toEqual([" ".repeat(20), " ".repeat(20)]);
+		expect(lines).toEqual([" ".repeat(20)]);
+
+		const indicator = new WorkingStatusIndicator({ requestRender: vi.fn() } as unknown as TUI, "Working");
+		expect(indicator.render(20)).toHaveLength(lines.length);
+		indicator.dispose();
 	});
 
 	it("keeps the top border unchanged unless the editor opts in", () => {
@@ -36,7 +40,7 @@ describe("status indicators", () => {
 		editor.setWorkingStatusIndicator(indicator);
 
 		expect(stripAnsi(editor.render(20)[0]!)).toBe("─".repeat(20));
-		const standaloneLine = indicator.render(20)[1]!;
+		const standaloneLine = indicator.render(20)[0]!;
 		expect(standaloneLine).toContain(theme.getFgAnsi("accent"));
 		expect(standaloneLine).toContain(theme.getFgAnsi("muted"));
 		indicator.dispose();
@@ -80,7 +84,7 @@ describe("status indicators", () => {
 		try {
 			for (const indicator of indicators) {
 				editor.setWorkingStatusIndicator(indicator);
-				const label = stripAnsi(indicator.render(120)[1]!).trim();
+				const label = stripAnsi(indicator.render(120)[0]!).trim();
 				expect(stripAnsi(editor.render(120)[0]!)).toContain(`── ${label} `);
 				for (const width of [1, 4, 10, 20, 80, 120]) {
 					expect(visibleWidth(editor.render(width)[0]!)).toBe(width);

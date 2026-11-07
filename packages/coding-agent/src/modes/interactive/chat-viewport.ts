@@ -30,8 +30,8 @@ export function createChatViewport(options: ChatViewportOptions): ChatViewport {
 	});
 	const dock = new VStack([
 		{ component: options.pendingMessages, shrink: 1, minSize: 0 },
-		{ component: options.status, shrink: 1, minSize: 0 },
 		...(options.widgetsAbove === undefined ? [] : [{ component: options.widgetsAbove, shrink: 1, minSize: 0 }]),
+		{ component: options.status, shrink: 1, minSize: 0 },
 		{ component: options.editor, shrink: 1, minSize: 3 },
 		...(options.widgetsBelow === undefined ? [] : [{ component: options.widgetsBelow, shrink: 1, minSize: 0 }]),
 		{ component: options.footer, shrink: 1, minSize: 0 },

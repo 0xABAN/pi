@@ -2887,6 +2887,8 @@ See [examples/extensions/timed-confirm.ts](../examples/extensions/timed-confirm.
 
 ### Widgets, Status, and Footer
 
+The working line is the row directly above the editor. Widgets placed above the editor appear over it.
+
 ```typescript
 // Status in footer (persistent until cleared)
 ctx.ui.setStatus("my-ext", "Processing...");

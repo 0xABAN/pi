@@ -1001,8 +1001,8 @@ export class InteractiveMode {
 		this.mountInteractiveTui(this.renderer, [
 			this.documentContainer,
 			this.pendingMessagesContainer,
-			this.statusContainer,
 			this.widgetContainerAbove,
+			this.statusContainer,
 			this.editorContainer,
 			this.widgetContainerBelow,
 			this.footerContainer,

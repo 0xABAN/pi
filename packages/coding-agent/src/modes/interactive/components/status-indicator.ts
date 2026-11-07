@@ -21,8 +21,12 @@ export class StatusIndicator extends Loader {
 		this.kind = kind;
 	}
 
+	override render(width: number): string[] {
+		return super.render(width).slice(1);
+	}
+
 	renderInBorder(width: number): string {
-		const line = super.render(width + 2)[1] ?? "";
+		const line = this.render(width + 2)[0] ?? "";
 		return truncateToWidth(line.startsWith(" ") ? line.slice(1).trimEnd() : line.trimEnd(), width, "");
 	}
 
@@ -117,7 +121,6 @@ export class IdleStatus implements Component {
 	}
 
 	render(width: number): string[] {
-		const emptyLine = " ".repeat(width);
-		return [emptyLine, emptyLine];
+		return [" ".repeat(width)];
 	}
 }
