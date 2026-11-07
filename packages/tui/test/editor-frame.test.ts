@@ -9,10 +9,6 @@ class TallEditor extends Editor {
 	protected override maxVisibleLines(): number {
 		return 8;
 	}
-
-	get visibleLineCount(): number {
-		return this.renderedVisibleLineCount;
-	}
 }
 
 describe("Editor frame hooks", () => {
@@ -22,7 +18,7 @@ describe("Editor frame hooks", () => {
 
 		const lines = editor.render(40);
 
-		assert.strictEqual(editor.visibleLineCount, 8);
+		assert.strictEqual(editor.renderedVisibleLineCount, 8);
 		assert.strictEqual(lines.length, 10);
 		assert.match(lines[0], /↑ 4 more/);
 	});
