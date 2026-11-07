@@ -89,8 +89,11 @@ function rebuildBashResultRenderComponent(
 	if (timerText) component.addChild(new Text(`\n${theme.fg("muted", timerText)}`, 0, 0));
 }
 
-/** Shell renderers are shared by bash and powershell, which differ only in the prompt they display. */
-export function createShellRenderers(prompt: string): Pick<ToolDefinition<any, any>, "renderCall" | "renderResult"> {
+/** Shell renderers are shared by bash and powershell, which differ only in the prompt and label they display. */
+export function createShellRenderers(
+	prompt: string,
+	label: string,
+): Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> {
 	return {
 		renderCall(args, _theme, context) {
 			startToolTimer(context);
@@ -104,6 +107,10 @@ export function createShellRenderers(prompt: string): Pick<ToolDefinition<any, a
 			rebuildBashResultRenderComponent(component, result as any, options, context.showImages, timerText);
 			component.invalidate();
 			return component;
+		},
+		summarize(args) {
+			const command = str((args as { command?: string } | undefined)?.command);
+			return { label, icon: "↯", target: command || undefined };
 		},
 	};
 }

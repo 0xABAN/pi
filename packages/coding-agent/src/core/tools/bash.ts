@@ -234,6 +234,7 @@ export interface ShellToolConfig {
 	label: string;
 	shellName: string;
 	prompt: string;
+	summaryLabel: string;
 	promptSnippet: string;
 	promptGuidelines?: readonly string[];
 	tempFilePrefix: string;
@@ -409,7 +410,7 @@ export function createShellToolDefinition(
 				clearUpdateTimer();
 			}
 		},
-		...createShellRenderers(config.prompt),
+		...createShellRenderers(config.prompt, config.summaryLabel),
 	};
 }
 
@@ -418,6 +419,7 @@ const bashToolConfig: ShellToolConfig = {
 	label: "bash",
 	shellName: "bash",
 	prompt: "$",
+	summaryLabel: "Bash",
 	promptSnippet: bashToolSystemPromptContribution.snippet,
 	promptGuidelines: bashToolSystemPromptContribution.guidelines,
 	tempFilePrefix: "pi-bash",

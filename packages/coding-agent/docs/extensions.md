@@ -2294,7 +2294,7 @@ async execute(toolCallId, params) {
 |---|---|
 | `defaultActive` | Set `false` to register the tool inactive; `--tools`, the `defaultTools` setting, or `pi.setActiveTools()` activates it |
 | `exposure`, `namespace`, `annotations`, `reachesTools`, `prepareLoadout` | Control how the model and other tools reach the tool; see [Tool Exposure](#tool-exposure) |
-| `renderShell`, `renderCall`, `renderResult` | Custom rendering; see [Custom Rendering](#custom-rendering) |
+| `renderShell`, `renderCall`, `renderResult`, `summarize` | Custom rendering; see [Custom Rendering](#custom-rendering) |
 | `constrainedSampling` | Optional provider-side constrained sampling request for the tool's arguments |
 
 Use `defineTool()` to keep parameter type inference when you assign a tool definition to a variable before registering it.
@@ -2356,7 +2356,7 @@ pi --no-builtin-tools -e ./my-extension.ts
 
 See [examples/extensions/tool-override.ts](../examples/extensions/tool-override.ts) for a complete example that overrides `read` with logging and access control.
 
-**Rendering:** Built-in renderer inheritance is resolved per slot. Execution override and rendering override are independent. If your override omits `renderCall`, the built-in `renderCall` is used. If your override omits `renderResult`, the built-in `renderResult` is used. If your override omits both, the built-in renderer is used automatically (syntax highlighting, diffs, etc.). This lets you wrap built-in tools for logging or access control without reimplementing the UI.
+**Rendering:** Built-in renderer inheritance is resolved per slot. Execution override and rendering override are independent. If your override omits `renderCall`, the built-in `renderCall` is used. If your override omits `renderResult`, the built-in `renderResult` is used. The same goes for `summarize`. If your override omits all of them, the built-in renderer is used automatically (syntax highlighting, diffs, etc.). This lets you wrap built-in tools for logging or access control without reimplementing the UI.
 
 **Prompt metadata:** `promptSnippet` and `promptGuidelines` are not inherited from the built-in tool. If your override should keep those prompt instructions, define them on the override explicitly.
 
@@ -2580,6 +2580,24 @@ renderResult(result, { expanded, isPartial }, theme, context) {
 ```
 
 If a slot intentionally has no visible content, return an empty `Component` such as an empty `Container`.
+
+#### summarize
+
+Describes the call for compact, one-line tool rows. Return plain text; rows remove terminal control sequences and join lines:
+
+```typescript
+summarize(args) {
+  return { label: "Deploy", icon: "↑", target: args.environment };
+}
+```
+
+- `label` - the tool's name in the row
+- `icon` - optional symbol, one column wide, shown before the label
+- `target` - optional; what the call acts on, such as a path or a command
+
+The row adds the call's status and duration. `summarize` runs whenever the arguments change, so keep it cheap and free of side effects.
+
+When the arguments describe the call best, `formatArgumentPreview(args)` from `@earendil-works/pi-coding-agent` turns them into a one-line `key=value` preview, as MCP tools do.
 
 #### Keybinding Hints
 

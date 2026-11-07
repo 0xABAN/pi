@@ -11,7 +11,7 @@ import { keyHint } from "../../../modes/interactive/components/keybinding-hints.
 import type { Theme } from "../../../modes/interactive/theme/theme.ts";
 import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
 import type { GrepToolDetails } from "../grep.ts";
-import { getTextOutput, invalidArgText, shortenPath, str } from "../render-utils.ts";
+import { formatSearchTarget, getTextOutput, invalidArgText, shortenPath, str } from "../render-utils.ts";
 import { DEFAULT_MAX_BYTES, formatSize } from "../truncate.ts";
 
 function formatGrepCall(
@@ -68,7 +68,7 @@ function formatGrepResult(
 	return text;
 }
 
-export const grepRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult"> = {
+export const grepRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
 	renderCall(args, theme, context) {
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 		text.setText(formatGrepCall(args as any, theme));
@@ -78,5 +78,9 @@ export const grepRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "rende
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 		text.setText(formatGrepResult(result as any, options, theme, context.showImages));
 		return text;
+	},
+	summarize(args) {
+		const searchArgs = args as { pattern?: string; path?: string } | undefined;
+		return { label: "Grep", icon: "◎", target: formatSearchTarget(searchArgs?.pattern, searchArgs?.path) };
 	},
 };

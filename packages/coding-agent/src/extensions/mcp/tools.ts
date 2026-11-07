@@ -30,7 +30,12 @@ import type {
 	ToolRenderers,
 } from "../../core/extensions/types.ts";
 import { READ_MCP_RESOURCE_TOOL } from "../../core/mcp-servers.ts";
-import { formatToolCallWithArgs, getTextOutput, replaceTabs } from "../../core/tools/render-utils.ts";
+import {
+	formatArgumentPreview,
+	formatToolCallWithArgs,
+	getTextOutput,
+	replaceTabs,
+} from "../../core/tools/render-utils.ts";
 import { formatSize, truncateMiddle } from "../../core/tools/truncate.ts";
 import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
 import { VisualLinePreview } from "../../modes/interactive/components/visual-truncate.ts";
@@ -386,6 +391,10 @@ export function createMcpToolRenderers(label: string): ToolRenderers {
 				if (fullOutputPath) component.addChild(new Text(theme.fg("muted", `Full output: ${fullOutputPath}`), 0, 0));
 			}
 			return component;
+		},
+		summarize(args) {
+			const preview = formatArgumentPreview(args);
+			return { label: "MCP", icon: "⌇", target: preview ? `${label} ${preview}` : label };
 		},
 	};
 }

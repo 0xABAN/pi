@@ -32,8 +32,8 @@ export {
 export function createAllToolRenderers(): Record<ToolName, ToolRenderers> {
 	return {
 		read: readRenderers,
-		bash: createShellRenderers("$"),
-		powershell: createShellRenderers("PS>"),
+		bash: createShellRenderers("$", "Bash"),
+		powershell: createShellRenderers("PS>", "PowerShell"),
 		edit: editRenderers,
 		write: writeRenderers,
 		grep: grepRenderers,
@@ -59,5 +59,6 @@ export function withBuiltInRenderers<TDefinition extends ToolRenderers>(
 		...definition,
 		renderCall: definition.renderCall ?? builtIn.renderCall,
 		renderResult: definition.renderResult ?? builtIn.renderResult,
+		summarize: definition.summarize ?? builtIn.summarize,
 	};
 }

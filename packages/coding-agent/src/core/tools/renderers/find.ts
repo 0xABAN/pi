@@ -11,7 +11,7 @@ import { keyHint } from "../../../modes/interactive/components/keybinding-hints.
 import type { Theme } from "../../../modes/interactive/theme/theme.ts";
 import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
 import type { FindToolDetails } from "../find.ts";
-import { getTextOutput, invalidArgText, shortenPath, str } from "../render-utils.ts";
+import { formatSearchTarget, getTextOutput, invalidArgText, shortenPath, str } from "../render-utils.ts";
 import { DEFAULT_MAX_BYTES, formatSize } from "../truncate.ts";
 
 function formatFindCall(args: { pattern: string; path?: string; limit?: number } | undefined, theme: Theme): string {
@@ -63,7 +63,7 @@ function formatFindResult(
 	return text;
 }
 
-export const findRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult"> = {
+export const findRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
 	renderCall(args, theme, context) {
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 		text.setText(formatFindCall(args as any, theme));
@@ -73,5 +73,9 @@ export const findRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "rende
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 		text.setText(formatFindResult(result as any, options, theme, context.showImages));
 		return text;
+	},
+	summarize(args) {
+		const searchArgs = args as { pattern?: string; path?: string } | undefined;
+		return { label: "Find", icon: "⊙", target: formatSearchTarget(searchArgs?.pattern, searchArgs?.path) };
 	},
 };

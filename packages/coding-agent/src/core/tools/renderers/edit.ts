@@ -12,7 +12,7 @@ import type { Theme } from "../../../modes/interactive/theme/theme.ts";
 import type { ToolDefinition } from "../../extensions/types.ts";
 import type { EditToolDetails } from "../edit.ts";
 import { computeEditsDiff, type Edit, type EditDiffError, type EditDiffResult } from "../edit-diff.ts";
-import { renderToolPath, str } from "../render-utils.ts";
+import { renderToolPath, shortenPath, str } from "../render-utils.ts";
 
 type EditPreview = EditDiffResult | EditDiffError;
 export type EditRenderState = {
@@ -170,7 +170,7 @@ function setEditPreview(
 	return changed;
 }
 
-export const editRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult"> = {
+export const editRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
 	renderCall(args, theme, context) {
 		const component = getEditCallRenderComponent(context.state, context.lastComponent);
 		const previewInput = getRenderablePreviewInput(args as RenderableEditArgs | undefined);
@@ -248,5 +248,10 @@ export const editRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "rende
 		component.addChild(new Spacer(1));
 		component.addChild(new Text(output, context.outputPad, 0));
 		return component;
+	},
+	summarize(rawArgs) {
+		const args = rawArgs as RenderableEditArgs | undefined;
+		const path = str(args?.file_path ?? args?.path);
+		return { label: "Edit", icon: "◈", target: path ? shortenPath(path) : undefined };
 	},
 };

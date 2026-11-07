@@ -518,6 +518,12 @@ export interface ToolRenderContext<TState = any, TArgs = any> extends Keybinding
 	outputPad: number;
 }
 
+export interface ToolSummary {
+	label: string;
+	icon?: string;
+	target?: string;
+}
+
 /**
  * How the model reaches a tool. "Callable" means callable from other tools through
  * `ctx.executeTool()`, as the `codemode` tool does.
@@ -685,11 +691,13 @@ export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = un
 		theme: Theme,
 		context: ToolRenderContext<TState, Static<TParams>>,
 	) => Component;
+
+	summarize?(args: Static<TParams>): ToolSummary;
 }
 
 type AnyToolDefinition = ToolDefinition<any, any, any>;
 
-export type ToolRenderers = Pick<AnyToolDefinition, "renderShell" | "renderCall" | "renderResult">;
+export type ToolRenderers = Pick<AnyToolDefinition, "renderShell" | "renderCall" | "renderResult" | "summarize">;
 
 /**
  * Chooses how calls to a tool are drawn, including tools that are not registered. `next()` returns

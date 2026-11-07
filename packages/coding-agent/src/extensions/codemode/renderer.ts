@@ -70,7 +70,7 @@ function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): 
 
 export const codemodeRenderers: Pick<
 	ToolDefinition<any, CodemodeToolDetails | undefined>,
-	"renderCall" | "renderResult"
+	"renderCall" | "renderResult" | "summarize"
 > = {
 	renderCall(args, theme, context) {
 		startToolTimer(context);
@@ -162,5 +162,9 @@ export const codemodeRenderers: Pick<
 			component.addChild(new Text(theme.fg("muted", timerText), 0, 0));
 		}
 		return component;
+	},
+	summarize(args) {
+		const code = str((args as { code?: unknown } | undefined)?.code);
+		return { label: "Codemode", icon: "⋈", target: code || undefined };
 	},
 };

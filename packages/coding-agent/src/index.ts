@@ -187,6 +187,7 @@ export type {
 	ToolRenderResultOptions,
 	ToolResultEvent,
 	ToolResultEventResult,
+	ToolSummary,
 	TurnEndEvent,
 	TurnEndEventResult,
 	TurnStartEvent,
@@ -392,7 +393,7 @@ export {
 	type WriteToolOptions,
 	withFileMutationQueue,
 } from "./core/tools/index.ts";
-export { formatReadLineRange } from "./core/tools/render-utils.ts";
+export { formatArgumentPreview, formatReadLineRange } from "./core/tools/render-utils.ts";
 export {
 	hasTrustRequiringProjectResources,
 	type ProjectTrustDecision,

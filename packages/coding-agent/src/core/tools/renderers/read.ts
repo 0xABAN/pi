@@ -16,7 +16,7 @@ import { formatPathRelativeToCwdOrAbsolute } from "../../../utils/paths.ts";
 import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
 import { resolveToCwd } from "../path-utils.ts";
 import type { ReadToolDetails } from "../read.ts";
-import { formatReadLineRange, getTextOutput, renderToolPath, replaceTabs, str } from "../render-utils.ts";
+import { formatReadLineRange, getTextOutput, renderToolPath, replaceTabs, shortenPath, str } from "../render-utils.ts";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize } from "../truncate.ts";
 
 interface CompactReadClassification {
@@ -145,7 +145,10 @@ function formatReadResult(
 	return text;
 }
 
-export const readRenderers: Pick<ToolDefinition<any, ReadToolDetails | undefined>, "renderCall" | "renderResult"> = {
+export const readRenderers: Pick<
+	ToolDefinition<any, ReadToolDetails | undefined>,
+	"renderCall" | "renderResult" | "summarize"
+> = {
 	renderCall(rawArgs, theme, context) {
 		const args = rawArgs as ReadRenderArgs | undefined;
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
@@ -169,5 +172,14 @@ export const readRenderers: Pick<ToolDefinition<any, ReadToolDetails | undefined
 			),
 		);
 		return text;
+	},
+	summarize(rawArgs) {
+		const args = rawArgs as ReadRenderArgs | undefined;
+		const path = str(args?.file_path ?? args?.path);
+		return {
+			label: "Read",
+			icon: "□",
+			target: path ? shortenPath(path) + formatReadLineRange(args?.offset, args?.limit) : undefined,
+		};
 	},
 };

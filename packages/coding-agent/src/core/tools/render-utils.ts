@@ -42,6 +42,11 @@ export function formatReadLineRange(offset: unknown, limit: unknown): string {
 	return `:${start}${end ? `-${end}` : ""}`;
 }
 
+export function formatSearchTarget(pattern: unknown, path: unknown): string | undefined {
+	const parts = [str(pattern), shortenPath(path)].filter(Boolean);
+	return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 export function replaceTabs(text: string): string {
 	return text.replace(/\t/g, "   ");
 }
@@ -91,11 +96,7 @@ const COLLAPSED_ARGS_CHARS = 100;
  */
 export function formatToolCallWithArgs(title: string, args: unknown, theme: Theme, expanded: boolean): string {
 	const header = theme.fg("toolTitle", theme.bold(title));
-	if (args == null) return header;
-	const entries =
-		typeof args === "object" && !Array.isArray(args)
-			? Object.entries(args)
-			: ([["args", args]] as [string, unknown][]);
+	const entries = argumentEntries(args);
 	if (entries.length === 0) return header;
 	if (expanded) {
 		const lines = entries.map(([key, value]) => {
@@ -104,9 +105,20 @@ export function formatToolCallWithArgs(title: string, args: unknown, theme: Them
 		});
 		return `${header}\n${theme.fg("muted", lines.join("\n"))}`;
 	}
-	const pairs = entries.map(([key, value]) => `${key}=${JSON.stringify(value) ?? String(value)}`).join(" ");
-	const preview = pairs.length > COLLAPSED_ARGS_CHARS ? `${pairs.slice(0, COLLAPSED_ARGS_CHARS - 3)}...` : pairs;
-	return `${header} ${theme.fg("muted", preview)}`;
+	return `${header} ${theme.fg("muted", formatArgumentPreview(args))}`;
+}
+
+/** Arguments as `key=value` pairs on one line, cut to {@link COLLAPSED_ARGS_CHARS}. */
+export function formatArgumentPreview(args: unknown): string {
+	const pairs = argumentEntries(args)
+		.map(([key, value]) => `${key}=${JSON.stringify(value) ?? String(value)}`)
+		.join(" ");
+	return pairs.length > COLLAPSED_ARGS_CHARS ? `${pairs.slice(0, COLLAPSED_ARGS_CHARS - 3)}...` : pairs;
+}
+
+function argumentEntries(args: unknown): [string, unknown][] {
+	if (args == null) return [];
+	return typeof args === "object" && !Array.isArray(args) ? Object.entries(args) : [["args", args]];
 }
 
 /** Duration as `4.2s` below a minute, then `1m 30s` and `2h 3m 4s`. */

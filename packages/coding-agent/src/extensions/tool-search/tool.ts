@@ -333,5 +333,9 @@ export function createToolSearchToolDefinition(
 							.join("\n")}`;
 			return { content: [{ type: "text", text }], details: { loaded: tools.map((tool) => tool.name) } };
 		},
+		summarize(args) {
+			const query = typeof args?.query === "string" ? args.query : "";
+			return { label: "Tool Search", icon: "⊙", target: query || undefined };
+		},
 	};
 }
