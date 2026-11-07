@@ -119,15 +119,12 @@ describe("TranscriptContainer", () => {
 		expect(plain(transcript([user("question")]).render(60)).slice(0, 2)).toEqual([` ◆ You · ${TIME}`, " question"]);
 	});
 
-	test("draws user messages without their shaded background only inside the transcript", () => {
-		const shade = theme.getBgAnsi("userMessageBg");
-
+	test("draws user messages without a shaded background", () => {
 		expect(
 			transcript([user("question")])
 				.render(100)
 				.join(""),
-		).not.toContain(shade);
-		expect(user("question").render(100).join("")).toContain(shade);
+		).not.toContain(theme.getBgAnsi("userMessageBg"));
 	});
 
 	test("routes clicks below the header to the thinking block", () => {

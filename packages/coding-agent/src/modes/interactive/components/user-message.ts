@@ -22,7 +22,6 @@ export class UserMessageComponent extends Container implements TranscriptMessage
 	private messageId?: string;
 	private timestamp?: string;
 	private sentAt?: number;
-	private transcriptLayout?: TranscriptLayout;
 	private readonly header = new SpeakerHeader("You");
 	private readonly separator = new MessageSeparator();
 
@@ -52,8 +51,6 @@ export class UserMessageComponent extends Container implements TranscriptMessage
 	}
 
 	setTranscriptLayout(layout: TranscriptLayout): void {
-		const firstLayout = this.transcriptLayout === undefined;
-		this.transcriptLayout = layout;
 		this.header.update({
 			visible: layout.showHeader,
 			padding: layout.headerPadding,
@@ -61,27 +58,21 @@ export class UserMessageComponent extends Container implements TranscriptMessage
 		});
 		this.separator.setPadding(layout.bodyPadding);
 
-		if (firstLayout || layout.bodyPadding !== this.outputPad) {
+		if (layout.bodyPadding !== this.outputPad) {
 			this.setOutputPad(layout.bodyPadding);
 		}
 	}
 
 	private rebuild(): void {
 		this.clear();
-		const inTranscript = this.transcriptLayout !== undefined;
-		if (inTranscript) this.addChild(this.header);
-		// The Markdown pads and colors its own background: a Box around it would keep a second full-width copy of every
-		// line, with identical output.
+		this.addChild(this.header);
 		this.addChild(
 			new Markdown(
 				this.text,
 				this.outputPad,
-				inTranscript ? 0 : 1,
+				0,
 				this.markdownTheme,
-				{
-					color: (content: string) => theme.fg("userMessageText", content),
-					bgColor: inTranscript ? undefined : (content: string) => theme.bg("userMessageBg", content),
-				},
+				{ color: (content: string) => theme.fg("userMessageText", content) },
 				{
 					preserveOrderedListMarkers: true,
 					preserveBackslashEscapes: true,
@@ -95,7 +86,7 @@ export class UserMessageComponent extends Container implements TranscriptMessage
 				},
 			),
 		);
-		if (inTranscript) this.addChild(this.separator);
+		this.addChild(this.separator);
 	}
 
 	override render(width: number): string[] {
