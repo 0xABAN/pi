@@ -2158,10 +2158,7 @@ describe("Editor component", () => {
 			editor.handleInput("\x1b[6~");
 			editor.handleInput("\x1b[5~");
 			editor.handleInput("\r");
-			assert.strictEqual(editor.getText(), "/command-5");
-			assert.strictEqual(submitted, "");
 
-			editor.handleInput("\r");
 			assert.strictEqual(submitted, "/command-5");
 		});
 

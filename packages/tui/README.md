@@ -477,7 +477,7 @@ Subclasses can change the frame. `maxVisibleLines()` sets how many wrapped lines
 `setHighlighter((line) => highlights)` styles parts of the text. It is called with each displayed line and returns `{ start, end, style }` ranges in that line, sorted and not overlapping; `style` wraps the range's text, for example in a color.
 
 **Key Bindings:**
-- `Enter` - Submit; while autocomplete is open, `Enter` or `Tab` inserts the selected item instead, slash commands included
+- `Enter` - Submit
 - `Shift+Enter`, `Ctrl+Enter`, or `Alt+Enter` - New line (terminal-dependent, Alt+Enter most reliable)
 - `Tab` - Autocomplete
 - `Ctrl+K` - Delete to end of line

@@ -2218,8 +2218,7 @@ describe("TuiAltScreen", () => {
 
 		terminal.sendInput("\r");
 		await terminal.waitForRender();
-		assert.strictEqual(editor.getText(), "/command-5");
-		assert.strictEqual(submitted, "");
+		assert.strictEqual(submitted, "/command-5");
 		assert.strictEqual(editor.isShowingAutocomplete(), false);
 		const topWithoutMenu = tui.viewportTop;
 		terminal.sendInput("\x1b[5~"); // PageUp scrolls the transcript again
