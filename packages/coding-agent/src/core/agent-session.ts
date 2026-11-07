@@ -1924,8 +1924,10 @@ export class AgentSession {
 					await this.agent.continue();
 					continue;
 				}
-				if (this._agentRunAbortRequested || !(await this._runBeforeSettleBoundary())) break;
 				if (this._agentRunAbortRequested) break;
+				const shouldContinue = await this._runBeforeSettleBoundary();
+				if (this._agentRunAbortRequested) break;
+				if (!shouldContinue && !this._canContinueWithQueuedMessages()) break;
 				await this.agent.continue();
 			}
 		} finally {
@@ -2033,6 +2035,10 @@ export class AgentSession {
 		// The low-level loop drains both queues before agent_end. Messages queued by
 		// agent_end handlers require a fresh run before pre-settlement handlers fire.
 		return !this._agentRunAbortRequested && this.agent.hasQueuedMessages();
+	}
+
+	private _canContinueWithQueuedMessages(): boolean {
+		return this.agent.hasQueuedMessages() && this._buildBoundaryContext([], "agent_before_settle").canContinue;
 	}
 
 	private async _runBeforeSettleBoundary(): Promise<boolean> {
