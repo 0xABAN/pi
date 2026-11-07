@@ -2,8 +2,8 @@ import type { TUI } from "../tui.ts";
 import { Text } from "./text.ts";
 
 export interface LoaderIndicatorOptions {
-	/** Animation frames. Use an empty array to hide the indicator. */
-	frames?: string[];
+	/** Animation frames, or a function that builds whole-line frames around the message. Use an empty array to hide the indicator. */
+	frames?: string[] | ((message: string) => string[]);
 	/** Frame interval in milliseconds for animated indicators. */
 	intervalMs?: number;
 }
@@ -16,6 +16,7 @@ const DEFAULT_INTERVAL_MS = 80;
  */
 export class Loader extends Text {
 	private frames = [...DEFAULT_FRAMES];
+	private buildLineFrames: ((message: string) => string[]) | undefined;
 	private intervalMs = DEFAULT_INTERVAL_MS;
 	private currentFrame = 0;
 	private intervalId: NodeJS.Timeout | null = null;
@@ -58,6 +59,10 @@ export class Loader extends Text {
 
 	setMessage(message: string): void {
 		this.message = message;
+		if (this.buildLineFrames) {
+			this.frames = this.buildLineFrames(message);
+			this.restartAnimation();
+		}
 		this.updateDisplay();
 	}
 
@@ -67,8 +72,10 @@ export class Loader extends Text {
 	}
 
 	setIndicator(indicator?: LoaderIndicatorOptions): void {
+		const frames = indicator?.frames ?? DEFAULT_FRAMES;
 		this.renderIndicatorVerbatim = indicator !== undefined;
-		this.frames = indicator?.frames !== undefined ? [...indicator.frames] : [...DEFAULT_FRAMES];
+		this.buildLineFrames = typeof frames === "function" ? frames : undefined;
+		this.frames = typeof frames === "function" ? frames(this.message) : [...frames];
 		this.intervalMs = indicator?.intervalMs && indicator.intervalMs > 0 ? indicator.intervalMs : DEFAULT_INTERVAL_MS;
 		this.currentFrame = 0;
 		this.start();
@@ -86,14 +93,18 @@ export class Loader extends Text {
 	}
 
 	protected getRenderedIndicator(): string {
-		const frame = this.frames[this.currentFrame] ?? "";
+		const frame = this.frames[this.currentFrame % this.frames.length] ?? "";
 		return this.renderIndicatorVerbatim ? frame : this.spinnerColorFn(frame);
 	}
 
 	private updateDisplay(): void {
 		const renderedFrame = this.getRenderedIndicator();
-		const indicator = renderedFrame.length > 0 ? `${renderedFrame} ` : "";
-		this.setText(`${indicator}${this.messageColorFn(this.message)}`);
+		if (this.buildLineFrames) {
+			this.setText(renderedFrame);
+		} else {
+			const indicator = renderedFrame.length > 0 ? `${renderedFrame} ` : "";
+			this.setText(`${indicator}${this.messageColorFn(this.message)}`);
+		}
 		if (this.ui) {
 			this.ui.requestRender();
 		}

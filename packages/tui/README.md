@@ -556,6 +556,8 @@ loader.setMessage("Still loading...");
 loader.stop();
 ```
 
+`setIndicator({ frames, intervalMs })` replaces the spinner. Frames given as an array are drawn before the message. Frames given as a function receive the message and are drawn as the whole line, so they can decorate it; the loader rebuilds them when the message changes.
+
 ### CancellableLoader
 
 Extends Loader with Escape key handling and an AbortSignal for cancelling async operations.
