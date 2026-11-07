@@ -472,6 +472,8 @@ editor.getPaddingX();  // Get current padding
 - Horizontal lines above/below editor
 - Fake cursor rendering (hidden real cursor)
 
+Subclasses can change the frame. `maxVisibleLines()` sets how many wrapped lines show before the editor scrolls (default: 30% of the terminal height, at least 5), `renderTopBorder(width, hiddenLineCount)` and `renderBottomBorder(width, hiddenLineCount)` draw the rules, and after `render()` the `renderedVisibleLineCount` field holds the number of content lines between them.
+
 **Key Bindings:**
 - `Enter` - Submit
 - `Shift+Enter`, `Ctrl+Enter`, or `Alt+Enter` - New line (terminal-dependent, Alt+Enter most reliable)

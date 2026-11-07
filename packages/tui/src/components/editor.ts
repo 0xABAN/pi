@@ -315,7 +315,7 @@ export class Editor implements Component, Focusable {
 
 	// Store last render geometry for cursor navigation and mouse hit-testing.
 	private lastWidth: number = 80;
-	private renderedVisibleLineCount = 1;
+	protected renderedVisibleLineCount = 1;
 	private renderedAutocompleteHeight = 0;
 
 	// Vertical scrolling support
@@ -513,6 +513,10 @@ export class Editor implements Component, Focusable {
 		// No cached state to invalidate currently
 	}
 
+	protected maxVisibleLines(): number {
+		return Math.max(5, Math.floor(this.tui.terminal.rows * 0.3));
+	}
+
 	protected renderTopBorder(width: number, hiddenLineCount: number): string {
 		const border = hiddenLineCount > 0 ? createScrollBorder("↑", hiddenLineCount, width) : "─".repeat(width);
 		return this.borderColor(border);
@@ -538,9 +542,7 @@ export class Editor implements Component, Focusable {
 		// Layout the text
 		const layoutLines = this.layoutText(layoutWidth);
 
-		// Calculate max visible lines: 30% of terminal height, minimum 5 lines
-		const terminalRows = this.tui.terminal.rows;
-		const maxVisibleLines = Math.max(5, Math.floor(terminalRows * 0.3));
+		const maxVisibleLines = this.maxVisibleLines();
 
 		// Find the cursor line index in layoutLines
 		let cursorLineIndex = layoutLines.findIndex((line) => line.hasCursor);
@@ -1970,8 +1972,7 @@ export class Editor implements Component, Focusable {
 	 */
 	private pageScroll(direction: -1 | 1): void {
 		this.lastAction = null;
-		const terminalRows = this.tui.terminal.rows;
-		const pageSize = Math.max(5, Math.floor(terminalRows * 0.3));
+		const pageSize = this.maxVisibleLines();
 
 		const visualLines = this.buildVisualLineMap(this.lastWidth);
 		const currentVisualLine = this.findCurrentVisualLine(visualLines);
