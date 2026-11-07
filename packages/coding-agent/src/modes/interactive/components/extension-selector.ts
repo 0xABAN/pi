@@ -3,12 +3,11 @@
  * Displays a list of string options with keyboard navigation.
  */
 
-import { Container, getKeybindings, Spacer, type TUI } from "@earendil-works/pi-tui";
+import { Container, getKeybindings, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
 import { CountdownTimer } from "./countdown-timer.ts";
 import { DialogBorder, dialogHeading, ExtensionDialog } from "./extension-dialog.ts";
 import { keyHint, rawKeyHint } from "./keybinding-hints.ts";
-import { ThemedText } from "./themed-text.ts";
 
 export interface ExtensionSelectorOptions {
 	tui?: TUI;
@@ -26,8 +25,7 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 	private listContainer: Container;
 	private onSelectCallback: (option: string) => void;
 	private onCancelCallback: () => void;
-	private titleText: ThemedText;
-	private title: string;
+	private titleText: Text;
 	private baseTitle: string;
 	private countdown: CountdownTimer | undefined;
 	private onToggleToolsExpanded: (() => void) | undefined;
@@ -45,18 +43,16 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
 		this.onToggleToolsExpanded = opts?.onToggleToolsExpanded;
-		this.title = title;
 		this.baseTitle = title;
 
 		this.addChild(new DialogBorder("top"));
 		this.addChild(new Spacer(1));
 
-		this.titleText = new ThemedText(() => dialogHeading(this.title), 0, 0);
+		this.titleText = new Text(dialogHeading(title), 0, 0);
 		this.addChild(this.titleText);
-		const description = opts?.description;
-		if (description) {
+		if (opts?.description) {
 			this.addChild(new Spacer(1));
-			this.addChild(new ThemedText(() => theme.fg("text", description), 0, 0));
+			this.addChild(new Text(theme.fg("text", opts.description), 0, 0));
 		}
 		this.addChild(new Spacer(1));
 
@@ -64,10 +60,7 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 			this.countdown = new CountdownTimer(
 				opts.timeout,
 				opts.tui,
-				(s) => {
-					this.title = `${this.baseTitle} (${s}s)`;
-					this.titleText.invalidate();
-				},
+				(s) => this.titleText.setText(dialogHeading(`${this.baseTitle} (${s}s)`)),
 				() => this.onCancelCallback(),
 			);
 		}
@@ -76,9 +69,8 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 		this.addChild(this.listContainer);
 		this.addChild(new Spacer(1));
 		this.addChild(
-			new ThemedText(
-				() =>
-					rawKeyHint("↑↓", "navigate") +
+			new Text(
+				rawKeyHint("↑↓", "navigate") +
 					"  " +
 					keyHint("tui.select.confirm", "select") +
 					"  " +
@@ -101,14 +93,14 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 		this.options.slice(this.scrollOffset, this.scrollOffset + count).forEach((option, offset) => {
 			const text =
 				this.scrollOffset + offset === this.selectedIndex
-					? () => theme.fg("accent", "◆ ") + theme.fg("text", theme.bold(option))
-					: () => theme.fg("muted", "◇ ") + theme.fg("text", option);
-			this.listContainer.addChild(new ThemedText(text, 0, 0));
+					? theme.fg("accent", "◆ ") + theme.fg("text", theme.bold(option))
+					: theme.fg("muted", "◇ ") + theme.fg("text", option);
+			this.listContainer.addChild(new Text(text, 0, 0));
 		});
 
 		if (count < this.options.length) {
 			const position = `(${this.selectedIndex + 1}/${this.options.length})`;
-			this.listContainer.addChild(new ThemedText(() => theme.fg("muted", position), 0, 0));
+			this.listContainer.addChild(new Text(theme.fg("muted", position), 0, 0));
 		}
 	}
 

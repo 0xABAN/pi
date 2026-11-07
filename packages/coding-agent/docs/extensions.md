@@ -2599,8 +2599,6 @@ The second argument is the call's result once it has one, partial while the tool
 
 The row adds the call's status and duration. Consecutive calls are grouped under an "N actions" line, and expanding a row shows the output of `renderCall` and `renderResult` below it. `summarize` can run on every update to the call, so keep it cheap and free of side effects.
 
-When the arguments describe the call best, `formatArgumentPreview(args)` from `@earendil-works/pi-coding-agent` turns them into a one-line `key=value` preview, as MCP tools do.
-
 #### Keybinding Hints
 
 Use `keyHint()` and `keyText()` from the render context to display keybinding hints that respect the user's keybinding configuration:

@@ -2,12 +2,11 @@
  * Simple text input component for extensions.
  */
 
-import { type Focusable, getKeybindings, Input, Spacer, type TUI } from "@earendil-works/pi-tui";
+import { type Focusable, getKeybindings, Input, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
 import { CountdownTimer } from "./countdown-timer.ts";
 import { DialogBorder, dialogHeading, ExtensionDialog } from "./extension-dialog.ts";
 import { keyHint } from "./keybinding-hints.ts";
-import { ThemedText } from "./themed-text.ts";
 
 export interface ExtensionInputOptions {
 	tui?: TUI;
@@ -20,8 +19,7 @@ export class ExtensionInputComponent extends ExtensionDialog implements Focusabl
 	private input: Input;
 	private onSubmitCallback: (value: string) => void;
 	private onCancelCallback: () => void;
-	private titleText: ThemedText;
-	private title: string;
+	private titleText: Text;
 	private baseTitle: string;
 	private countdown: CountdownTimer | undefined;
 
@@ -46,18 +44,16 @@ export class ExtensionInputComponent extends ExtensionDialog implements Focusabl
 
 		this.onSubmitCallback = onSubmit;
 		this.onCancelCallback = onCancel;
-		this.title = title;
 		this.baseTitle = title;
 
 		this.addChild(new DialogBorder("top"));
 		this.addChild(new Spacer(1));
 
-		this.titleText = new ThemedText(() => dialogHeading(this.title), 0, 0);
+		this.titleText = new Text(dialogHeading(title), 0, 0);
 		this.addChild(this.titleText);
-		const description = opts?.description;
-		if (description) {
+		if (opts?.description) {
 			this.addChild(new Spacer(1));
-			this.addChild(new ThemedText(() => theme.fg("text", description), 0, 0));
+			this.addChild(new Text(theme.fg("text", opts.description), 0, 0));
 		}
 		this.addChild(new Spacer(1));
 
@@ -65,10 +61,7 @@ export class ExtensionInputComponent extends ExtensionDialog implements Focusabl
 			this.countdown = new CountdownTimer(
 				opts.timeout,
 				opts.tui,
-				(s) => {
-					this.title = `${this.baseTitle} (${s}s)`;
-					this.titleText.invalidate();
-				},
+				(s) => this.titleText.setText(dialogHeading(`${this.baseTitle} (${s}s)`)),
 				() => this.onCancelCallback(),
 			);
 		}
@@ -78,11 +71,7 @@ export class ExtensionInputComponent extends ExtensionDialog implements Focusabl
 		this.addChild(this.input);
 		this.addChild(new Spacer(1));
 		this.addChild(
-			new ThemedText(
-				() => `${keyHint("tui.select.confirm", "submit")}  ${keyHint("tui.select.cancel", "cancel")}`,
-				0,
-				0,
-			),
+			new Text(`${keyHint("tui.select.confirm", "submit")}  ${keyHint("tui.select.cancel", "cancel")}`, 0, 0),
 		);
 		this.addChild(new Spacer(1));
 		this.addChild(new DialogBorder("bottom"));
