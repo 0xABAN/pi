@@ -58,4 +58,6 @@ Review a session before exporting or sharing it. Sessions can contain prompts, t
 - Each prompt template is available under its template name.
 - Each skill is available under its skill name, also after a space anywhere in a prompt.
 
+Typing `/` lists skills first, then prompt templates, extension commands, and built-in commands. Typing more ranks the matches by how well they fit; equal matches keep that order.
+
 Use `/reload` after adding or changing a discovered command resource. See [Extensions](extensions.md), [Prompt Templates](prompt-templates.md), and [Skills](skills.md) for their loading and naming rules.

@@ -821,7 +821,7 @@ export class InteractiveMode {
 		}));
 
 		return new CombinedAutocompleteProvider(
-			[...slashCommands, ...templateCommands, ...extensionCommands, ...skillCommandList],
+			[...skillCommandList, ...templateCommands, ...extensionCommands, ...slashCommands],
 			this.sessionManager.getCwd(),
 			this.fdPath,
 		);

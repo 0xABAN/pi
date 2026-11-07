@@ -596,6 +596,38 @@ describe("InteractiveMode.createBaseAutocompleteProvider", () => {
 		});
 		expect(radiusSuggestions?.items).toEqual([{ value: "radius", label: "radius", description: "Radius · account" }]);
 	});
+
+	test("lists skills, then prompt templates, then extension commands, then built-in commands", async () => {
+		const fakeThis = {
+			session: {
+				scopedModels: [],
+				modelRuntime: { getAvailableSnapshot: () => [] },
+				promptTemplates: [{ name: "draft", description: "Draft" }],
+				extensionRunner: {
+					getRegisteredCommands: () => [{ name: "deploy", invocationName: "deploy", description: "Deploy" }],
+				},
+				resourceLoader: { getSkills: () => ({ skills: [{ name: "write", description: "Write" }] }) },
+			},
+			sessionManager: { getCwd: () => "/tmp" },
+			fdPath: null,
+			prefixAutocompleteDescription: (description: string | undefined) => description,
+		};
+		const createBaseAutocompleteProvider = (
+			InteractiveMode as unknown as {
+				prototype: { createBaseAutocompleteProvider(this: typeof fakeThis): AutocompleteProvider };
+			}
+		).prototype.createBaseAutocompleteProvider;
+
+		const provider = createBaseAutocompleteProvider.call(fakeThis);
+		const suggestions = await provider.getSuggestions(["/"], 0, 1, { signal: new AbortController().signal });
+
+		expect(suggestions?.items.slice(0, 4).map((item) => item.value)).toEqual([
+			"write",
+			"draft",
+			"deploy",
+			"settings",
+		]);
+	});
 });
 describe("InteractiveMode.showLoadedResources", () => {
 	beforeAll(() => {
