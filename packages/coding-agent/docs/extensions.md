@@ -2530,7 +2530,7 @@ pi.registerTool({
 - `lastComponent` - the previously returned component for that slot, if any
 - `invalidate()` - request a rerender of this tool row
 - `toolCallId`, `cwd`, `executionStarted`, `argsComplete`, `isPartial`, `expanded`, `showImages`, `isError`
-- `durationMs` - how long execution took, from the final result; `undefined` while running
+- `durationMs` - how long execution took, from the final result; `undefined` while running. `formatToolDuration(ms)` from `@earendil-works/pi-coding-agent` formats a duration the way tool rows do: `4.2s`, `1m 30s`, `2h 3m 4s`
 - `outputPad` - horizontal padding from the `outputPad` setting; renderers with `renderShell: "self"` apply it themselves
 - `keyText()`, `keyHint()` - format the user's configured keybindings, see [Keybinding Hints](#keybinding-hints)
 

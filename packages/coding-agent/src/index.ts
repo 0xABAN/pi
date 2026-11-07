@@ -393,7 +393,7 @@ export {
 	type WriteToolOptions,
 	withFileMutationQueue,
 } from "./core/tools/index.ts";
-export { formatReadLineRange } from "./core/tools/render-utils.ts";
+export { formatReadLineRange, formatToolDuration } from "./core/tools/render-utils.ts";
 export {
 	hasTrustRequiringProjectResources,
 	type ProjectTrustDecision,
