@@ -2,11 +2,12 @@
  * Simple text input component for extensions.
  */
 
-import { Container, type Focusable, getKeybindings, Input, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
+import { type Focusable, getKeybindings, Input, Spacer, type TUI } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
 import { CountdownTimer } from "./countdown-timer.ts";
-import { DynamicBorder } from "./dynamic-border.ts";
+import { DialogBorder, dialogHeading, ExtensionDialog } from "./extension-dialog.ts";
 import { keyHint } from "./keybinding-hints.ts";
+import { ThemedText } from "./themed-text.ts";
 
 export interface ExtensionInputOptions {
 	tui?: TUI;
@@ -15,11 +16,12 @@ export interface ExtensionInputOptions {
 	description?: string;
 }
 
-export class ExtensionInputComponent extends Container implements Focusable {
+export class ExtensionInputComponent extends ExtensionDialog implements Focusable {
 	private input: Input;
 	private onSubmitCallback: (value: string) => void;
 	private onCancelCallback: () => void;
-	private titleText: Text;
+	private titleText: ThemedText;
+	private title: string;
 	private baseTitle: string;
 	private countdown: CountdownTimer | undefined;
 
@@ -44,16 +46,18 @@ export class ExtensionInputComponent extends Container implements Focusable {
 
 		this.onSubmitCallback = onSubmit;
 		this.onCancelCallback = onCancel;
+		this.title = title;
 		this.baseTitle = title;
 
-		this.addChild(new DynamicBorder());
+		this.addChild(new DialogBorder("top"));
 		this.addChild(new Spacer(1));
 
-		this.titleText = new Text(theme.fg("accent", title), 1, 0);
+		this.titleText = new ThemedText(() => dialogHeading(this.title), 0, 0);
 		this.addChild(this.titleText);
-		if (opts?.description) {
+		const description = opts?.description;
+		if (description) {
 			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("text", opts.description), 1, 0));
+			this.addChild(new ThemedText(() => theme.fg("text", description), 0, 0));
 		}
 		this.addChild(new Spacer(1));
 
@@ -61,7 +65,10 @@ export class ExtensionInputComponent extends Container implements Focusable {
 			this.countdown = new CountdownTimer(
 				opts.timeout,
 				opts.tui,
-				(s) => this.titleText.setText(theme.fg("accent", `${this.baseTitle} (${s}s)`)),
+				(s) => {
+					this.title = `${this.baseTitle} (${s}s)`;
+					this.titleText.invalidate();
+				},
 				() => this.onCancelCallback(),
 			);
 		}
@@ -71,10 +78,14 @@ export class ExtensionInputComponent extends Container implements Focusable {
 		this.addChild(this.input);
 		this.addChild(new Spacer(1));
 		this.addChild(
-			new Text(`${keyHint("tui.select.confirm", "submit")}  ${keyHint("tui.select.cancel", "cancel")}`, 1, 0),
+			new ThemedText(
+				() => `${keyHint("tui.select.confirm", "submit")}  ${keyHint("tui.select.cancel", "cancel")}`,
+				0,
+				0,
+			),
 		);
 		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
+		this.addChild(new DialogBorder("bottom"));
 	}
 
 	handleInput(keyData: string): void {
