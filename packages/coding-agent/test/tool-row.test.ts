@@ -1,7 +1,12 @@
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, test } from "vitest";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
-import { genericToolSummary, renderToolRow, type ToolRowState } from "../src/modes/interactive/transcript/tool-row.ts";
+import {
+	genericToolSummary,
+	renderToolRow,
+	type ToolRowState,
+	toolBranch,
+} from "../src/modes/interactive/transcript/tool-row.ts";
 import { stripAnsi } from "../src/utils/ansi.ts";
 
 const read = { label: "Read", icon: "□", target: "src/app.ts" };
@@ -48,6 +53,23 @@ describe("renderToolRow", () => {
 		const summary = { label: "Run\n", icon: "↯", target: "echo a\n\x1b[31mb\x1b[0m\tc" };
 
 		expect(plain(renderToolRow(summary, { ...done, durationMs: undefined }, 40))).toEqual(["✓ ↯ Run echo a b c"]);
+	});
+
+	test("draws an inner branch beside the row and its error line", () => {
+		const failed: ToolRowState = { status: "failed", durationMs: undefined, error: "denied" };
+
+		expect(plain(renderToolRow(read, failed, 30, toolBranch(0, 3, 30)))).toEqual([
+			"├─ × □ Read src/app.ts",
+			"│    denied",
+		]);
+	});
+
+	test("ends the tree at the last call and leaves lone or cramped calls without one", () => {
+		expect(plain(renderToolRow(read, done, 30, toolBranch(2, 3, 30)))).toEqual([
+			`╰─ ✓ □ Read src/app.ts${" ".repeat(4)}0.1s`,
+		]);
+		expect(toolBranch(0, 1, 30)).toBeUndefined();
+		expect(toolBranch(0, 3, 11)).toBeUndefined();
 	});
 
 	test("describes tools without a summary by name and arguments", () => {

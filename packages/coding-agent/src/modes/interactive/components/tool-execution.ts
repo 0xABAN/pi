@@ -9,6 +9,7 @@ import {
 	Text,
 	type TUI,
 	type TuiMouseEvent,
+	truncateToWidth,
 } from "@earendil-works/pi-tui";
 import type { ToolDefinition, ToolRenderContext, ToolRenderers, ToolSummary } from "../../../core/extensions/types.ts";
 
@@ -18,7 +19,13 @@ export type { ToolRenderers };
 import { formatToolCallWithArgs, getTextOutput as getRenderedTextOutput } from "../../../core/tools/render-utils.ts";
 import { ensurePngTranscoder } from "../../../utils/image-convert.ts";
 import { theme } from "../theme/theme.ts";
-import { genericToolSummary, renderToolRow, type ToolRowState } from "../transcript/tool-row.ts";
+import {
+	genericToolSummary,
+	renderToolRow,
+	type ToolBranch,
+	type ToolRowState,
+	toolBranch,
+} from "../transcript/tool-row.ts";
 import type { TranscriptTool, TranscriptToolLayout } from "../transcript/transcript-container.ts";
 import { keyHint, keyText } from "./keybinding-hints.ts";
 
@@ -36,6 +43,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	private contentText: Text;
 	private contentTextRegion: MouseRegion;
 	private selfRenderContainer: Container;
+	private selfRenderTop = 1;
 	private selfRenderHeight = 0;
 	private callRendererComponent?: Component;
 	private resultRendererComponent?: Component;
@@ -66,10 +74,11 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		durationMs?: number;
 	};
 	private hideComponent = false;
+	private readonly outputGap = new Spacer(1);
 	private transcriptLayout?: TranscriptToolLayout;
 	private readonly transcriptView = new Container();
 	private revision = 0;
-	private rowCache?: { width: number; revision: number; lines: string[] };
+	private rowCache?: { key: string; lines: string[] };
 
 	constructor(
 		toolName: string,
@@ -91,7 +100,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		this.ui = ui;
 		this.cwd = cwd;
 
-		this.addChild(new Spacer(1));
+		this.addChild(this.outputGap);
 
 		// Always create all shell variants. contentBox is used for default renderer-based composition.
 		// selfRenderContainer is used when the tool renders its own framing.
@@ -107,10 +116,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 			this.addChild(this.contentTextRegion);
 		}
 
-		this.transcriptView.addChild({
-			render: () => (this.transcriptLayout?.leadingBlank ? [""] : []),
-			invalidate: () => {},
-		});
+		this.transcriptView.addChild({ render: (width) => this.renderGroupStart(width), invalidate: () => {} });
 		this.transcriptView.addChild(
 			new MouseRegion({ render: (width) => this.renderRow(width), invalidate: () => {} }, (event) => {
 				if (event.type !== "click" || event.button !== "left") return undefined;
@@ -119,8 +125,8 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 			}),
 		);
 		this.transcriptView.addChild({
-			render: (width) => (this.expanded ? this.renderBlock(width) : this.renderImages(width)),
-			handleMouse: (event) => (this.expanded ? this.handleBlockMouse(event) : undefined),
+			render: (width) => this.renderOutput(width),
+			handleMouse: (event) => this.handleOutputMouse(event),
 			invalidate: () => {},
 		});
 
@@ -129,9 +135,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	setTranscriptLayout(layout: TranscriptToolLayout): void {
 		this.transcriptLayout = layout;
-		if (layout.bodyPadding !== this.outputPad) {
-			this.setOutputPad(layout.bodyPadding);
-		}
+		this.outputGap.setLines(0);
 	}
 
 	private getCallRenderer(): ToolDefinition<any, any>["renderCall"] | undefined {
@@ -266,7 +270,11 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	override render(width: number): string[] {
 		if (this.argsPending) this.updateDisplay();
-		return this.transcriptLayout ? this.transcriptView.render(width) : this.renderBlock(width);
+		if (!this.transcriptLayout) return this.renderBlock(width);
+
+		const outputPad = this.branch(width) ? 1 : this.transcriptLayout.bodyPadding;
+		if (outputPad !== this.outputPad) this.setOutputPad(outputPad);
+		return this.transcriptView.render(width);
 	}
 
 	private renderBlock(width: number): string[] {
@@ -283,7 +291,8 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 			const lines: string[] = [];
 			if (contentLines.length > 0) {
-				lines.push("");
+				lines.push(...this.outputGap.render(width));
+				this.selfRenderTop = lines.length;
 				lines.push(...contentLines);
 			}
 			lines.push(...this.renderImages(width));
@@ -308,15 +317,59 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		return lines;
 	}
 
-	private renderRow(width: number): string[] {
-		if (this.rowCache?.width === width && this.rowCache.revision === this.revision) {
-			return this.rowCache.lines;
+	private renderGroupStart(width: number): string[] {
+		const layout = this.transcriptLayout;
+		if (layout?.index !== 0) return [];
+
+		const lines = layout.tight ? [] : [""];
+		if (layout.groupSize > 1) {
+			const header = `${" ".repeat(layout.bodyPadding)}${theme.fg("muted", `${layout.groupSize} actions`)}`;
+			lines.push(truncateToWidth(header, width, "…"));
 		}
-		const indent = " ".repeat(this.outputPad);
-		const rowWidth = Math.max(1, width - this.outputPad);
-		const lines = renderToolRow(this.summarize(), this.rowState(), rowWidth).map((line) => indent + line);
-		this.rowCache = { width, revision: this.revision, lines };
 		return lines;
+	}
+
+	private renderRow(width: number): string[] {
+		const layout = this.transcriptLayout;
+		const bodyPadding = layout?.bodyPadding ?? 0;
+		const key = `${width} ${this.revision} ${layout?.index} ${layout?.groupSize} ${bodyPadding}`;
+		if (this.rowCache?.key === key) return this.rowCache.lines;
+
+		const indent = " ".repeat(bodyPadding);
+		const rowWidth = Math.max(1, width - bodyPadding);
+		const lines = renderToolRow(this.summarize(), this.rowState(), rowWidth, this.branch(width)).map(
+			(line) => indent + line,
+		);
+		this.rowCache = { key, lines };
+		return lines;
+	}
+
+	private renderOutput(width: number): string[] {
+		const prefix = this.outputPrefix(width);
+		const outputWidth = width - prefix.length;
+		const lines = this.expanded ? this.renderBlock(outputWidth) : this.renderImages(outputWidth);
+		if (!prefix) return lines;
+
+		const styledPrefix = theme.fg("borderMuted", prefix);
+		return lines.map((line) => styledPrefix + line);
+	}
+
+	private handleOutputMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
+		if (!this.expanded) return undefined;
+
+		const offset = this.outputPrefix(event.width).length;
+		if (event.x < offset) return undefined;
+		return this.handleBlockMouse({ ...event, x: event.x - offset, width: event.width - offset });
+	}
+
+	private outputPrefix(width: number): string {
+		const branch = this.branch(width);
+		return branch ? " ".repeat(this.transcriptLayout?.bodyPadding ?? 0) + branch.output : "";
+	}
+
+	private branch(width: number): ToolBranch | undefined {
+		const layout = this.transcriptLayout;
+		return layout && toolBranch(layout.index, layout.groupSize, width - layout.bodyPadding);
 	}
 
 	private summarize(): ToolSummary {
@@ -344,10 +397,10 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	private handleBlockMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.hasRendererDefinition() || this.getRenderShell() !== "self") return super.handleMouse(event);
-		if (event.y <= 0 || event.y > this.selfRenderHeight) return undefined;
+		if (event.y < this.selfRenderTop || event.y >= this.selfRenderTop + this.selfRenderHeight) return undefined;
 		return this.selfRenderContainer.handleMouse({
 			...event,
-			y: event.y - 1,
+			y: event.y - this.selfRenderTop,
 			height: this.selfRenderHeight,
 		});
 	}

@@ -16,14 +16,35 @@ export interface ToolRowState {
 	readonly error: string | undefined;
 }
 
+export interface ToolBranch {
+	readonly row: string;
+	readonly continuation: string;
+	readonly output: string;
+}
+
+const INNER_BRANCH: ToolBranch = { row: "├─ ", continuation: "│  ", output: "│ " };
+const LAST_BRANCH: ToolBranch = { row: "╰─ ", continuation: "   ", output: "  " };
+
 const LABEL_WIDTH = 6;
 const ALIGNED_LABEL_MIN_WIDTH = 60;
+const TREE_MIN_WIDTH = 12;
 
 export function genericToolSummary(toolName: string, args: unknown): ToolSummary {
 	return { label: toolName, icon: "⌇", target: formatArgumentPreview(args) };
 }
 
-export function renderToolRow(summary: ToolSummary, state: ToolRowState, width: number): string[] {
+export function toolBranch(index: number, groupSize: number, width: number): ToolBranch | undefined {
+	if (groupSize < 2 || width < TREE_MIN_WIDTH) return undefined;
+	return index === groupSize - 1 ? LAST_BRANCH : INNER_BRANCH;
+}
+
+export function renderToolRow(summary: ToolSummary, state: ToolRowState, width: number, branch?: ToolBranch): string[] {
+	if (branch) {
+		return renderToolRow(summary, state, width - branch.row.length).map(
+			(line, index) => theme.fg("borderMuted", index === 0 ? branch.row : branch.continuation) + line,
+		);
+	}
+
 	const label = plain(summary.label);
 	const shownLabel = width < ALIGNED_LABEL_MIN_WIDTH ? label : label.padEnd(LABEL_WIDTH);
 	const parts = [statusGlyph(state.status)];

@@ -14,7 +14,9 @@ export interface TranscriptMessage extends Component {
 }
 
 export interface TranscriptToolLayout {
-	readonly leadingBlank: boolean;
+	readonly index: number;
+	readonly groupSize: number;
+	readonly tight: boolean;
 	readonly bodyPadding: number;
 }
 
@@ -47,23 +49,30 @@ export class TranscriptContainer extends Container {
 		const tight = this.getRows() < SHORT_WINDOW_ROWS;
 
 		let speaker: "user" | "pi" | undefined;
-		let previousRole: TranscriptRole | undefined;
+		let tools: TranscriptTool[] = [];
+		const endToolGroup = () => {
+			tools.forEach((tool, index) => {
+				tool.setTranscriptLayout({ index, groupSize: tools.length, tight, bodyPadding });
+			});
+			tools = [];
+		};
+
 		for (const child of this.children) {
 			const role = transcriptRole(child);
 			if (role === "tool") {
-				const leadingBlank = previousRole !== "tool" && !tight;
-				(child as TranscriptTool).setTranscriptLayout({ leadingBlank, bodyPadding });
+				tools.push(child as TranscriptTool);
 			} else if (role === undefined) {
+				endToolGroup();
 				speaker = undefined;
 			} else {
 				const message = child as TranscriptMessage;
 				const showHeader = role === "user" || speaker !== "pi";
 				message.setTranscriptLayout({ showHeader, tight, headerPadding, bodyPadding });
 				speaker = role;
-				if (message.isEmpty) continue;
+				if (!message.isEmpty) endToolGroup();
 			}
-			previousRole = role;
 		}
+		endToolGroup();
 
 		return super.render(width);
 	}
