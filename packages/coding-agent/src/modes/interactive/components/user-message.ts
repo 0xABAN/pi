@@ -14,6 +14,7 @@ const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
  */
 export class UserMessageComponent extends Container implements TranscriptMessage {
 	readonly transcriptRole = "user";
+	readonly isEmpty = false;
 	private text: string;
 	private markdownTheme: MarkdownTheme;
 	private outputPad: number;

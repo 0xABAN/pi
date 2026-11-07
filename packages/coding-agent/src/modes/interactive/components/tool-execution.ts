@@ -10,7 +10,7 @@ import {
 	type TUI,
 	type TuiMouseEvent,
 } from "@earendil-works/pi-tui";
-import type { ToolDefinition, ToolRenderContext, ToolRenderers } from "../../../core/extensions/types.ts";
+import type { ToolDefinition, ToolRenderContext, ToolRenderers, ToolSummary } from "../../../core/extensions/types.ts";
 
 /** What this component needs from a tool: how to draw it, without executing it. */
 export type { ToolRenderers };
@@ -18,7 +18,8 @@ export type { ToolRenderers };
 import { formatToolCallWithArgs, getTextOutput as getRenderedTextOutput } from "../../../core/tools/render-utils.ts";
 import { ensurePngTranscoder } from "../../../utils/image-convert.ts";
 import { theme } from "../theme/theme.ts";
-import type { TranscriptTool } from "../transcript/transcript-container.ts";
+import { genericToolSummary, renderToolRow, type ToolRowState } from "../transcript/tool-row.ts";
+import type { TranscriptTool, TranscriptToolLayout } from "../transcript/transcript-container.ts";
 import { keyHint, keyText } from "./keybinding-hints.ts";
 
 const FALLBACK_PREVIEW_LINES = 10;
@@ -65,6 +66,10 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		durationMs?: number;
 	};
 	private hideComponent = false;
+	private transcriptLayout?: TranscriptToolLayout;
+	private readonly transcriptView = new Container();
+	private revision = 0;
+	private rowCache?: { width: number; revision: number; lines: string[] };
 
 	constructor(
 		toolName: string,
@@ -102,7 +107,31 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 			this.addChild(this.contentTextRegion);
 		}
 
+		this.transcriptView.addChild({
+			render: () => (this.transcriptLayout?.leadingBlank ? [""] : []),
+			invalidate: () => {},
+		});
+		this.transcriptView.addChild(
+			new MouseRegion({ render: (width) => this.renderRow(width), invalidate: () => {} }, (event) => {
+				if (event.type !== "click" || event.button !== "left") return undefined;
+				this.setExpanded(!this.expanded);
+				return { handled: true };
+			}),
+		);
+		this.transcriptView.addChild({
+			render: (width) => (this.expanded ? this.renderBlock(width) : this.renderImages(width)),
+			handleMouse: (event) => (this.expanded ? this.handleBlockMouse(event) : undefined),
+			invalidate: () => {},
+		});
+
 		this.updateDisplay();
+	}
+
+	setTranscriptLayout(layout: TranscriptToolLayout): void {
+		this.transcriptLayout = layout;
+		if (layout.bodyPadding !== this.outputPad) {
+			this.setOutputPad(layout.bodyPadding);
+		}
 	}
 
 	private getCallRenderer(): ToolDefinition<any, any>["renderCall"] | undefined {
@@ -237,6 +266,10 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	override render(width: number): string[] {
 		if (this.argsPending) this.updateDisplay();
+		return this.transcriptLayout ? this.transcriptView.render(width) : this.renderBlock(width);
+	}
+
+	private renderBlock(width: number): string[] {
 		if (this.hideComponent) {
 			return [];
 		}
@@ -253,23 +286,63 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 				lines.push("");
 				lines.push(...contentLines);
 			}
-			for (let i = 0; i < this.imageComponents.length; i++) {
-				const spacer = this.imageSpacers[i];
-				if (spacer) {
-					lines.push(...spacer.render(width));
-				}
-				const imageComponent = this.imageComponents[i];
-				if (imageComponent) {
-					lines.push(...imageComponent.render(width));
-				}
-			}
+			lines.push(...this.renderImages(width));
 			return lines;
 		}
 
 		return super.render(width);
 	}
 
+	private renderImages(width: number): string[] {
+		const lines: string[] = [];
+		for (let i = 0; i < this.imageComponents.length; i++) {
+			const spacer = this.imageSpacers[i];
+			if (spacer) {
+				lines.push(...spacer.render(width));
+			}
+			const imageComponent = this.imageComponents[i];
+			if (imageComponent) {
+				lines.push(...imageComponent.render(width));
+			}
+		}
+		return lines;
+	}
+
+	private renderRow(width: number): string[] {
+		if (this.rowCache?.width === width && this.rowCache.revision === this.revision) {
+			return this.rowCache.lines;
+		}
+		const indent = " ".repeat(this.outputPad);
+		const rowWidth = Math.max(1, width - this.outputPad);
+		const lines = renderToolRow(this.summarize(), this.rowState(), rowWidth).map((line) => indent + line);
+		this.rowCache = { width, revision: this.revision, lines };
+		return lines;
+	}
+
+	private summarize(): ToolSummary {
+		return this.toolDefinition?.summarize?.(this.args) ?? genericToolSummary(this.toolName, this.args);
+	}
+
+	private rowState(): ToolRowState {
+		const result = this.result;
+		if (!result || this.isPartial) {
+			const status = this.executionStarted || result ? "running" : "waiting";
+			return { status, durationMs: undefined, error: undefined };
+		}
+		if (result.isError) {
+			const error = this.getTextOutput()
+				.split("\n")
+				.find((line) => line.trim());
+			return { status: "failed", durationMs: result.durationMs, error };
+		}
+		return { status: "done", durationMs: result.durationMs, error: undefined };
+	}
+
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
+		return this.transcriptLayout ? this.transcriptView.handleMouse(event) : this.handleBlockMouse(event);
+	}
+
+	private handleBlockMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.hasRendererDefinition() || this.getRenderShell() !== "self") return super.handleMouse(event);
 		if (event.y <= 0 || event.y > this.selfRenderHeight) return undefined;
 		return this.selfRenderContainer.handleMouse({
@@ -281,6 +354,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	private updateDisplay(): void {
 		this.argsPending = false;
+		this.revision++;
 		const bgFn = this.isPartial
 			? (text: string) => theme.bg("toolPendingBg", text)
 			: this.result?.isError

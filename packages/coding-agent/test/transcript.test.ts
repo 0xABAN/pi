@@ -1,7 +1,10 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { Text } from "@earendil-works/pi-tui";
-import { beforeAll, describe, expect, test } from "vitest";
+import { Text, type TUI } from "@earendil-works/pi-tui";
+import { beforeAll, describe, expect, test, vi } from "vitest";
+import type { ToolRenderers } from "../src/core/extensions/types.ts";
+import { withBuiltInRenderers } from "../src/core/tools/renderers/index.ts";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
+import { ToolExecutionComponent } from "../src/modes/interactive/components/tool-execution.ts";
 import { UserMessageComponent } from "../src/modes/interactive/components/user-message.ts";
 import { initTheme, theme } from "../src/modes/interactive/theme/theme.ts";
 import { TranscriptContainer, type TranscriptTool } from "../src/modes/interactive/transcript/transcript-container.ts";
@@ -38,7 +41,12 @@ function user(text: string): UserMessageComponent {
 	return new UserMessageComponent(text, undefined, 1, [], undefined, undefined, SENT_AT);
 }
 
-const tool: TranscriptTool = { transcriptRole: "tool", render: () => ["tool row"], invalidate: () => {} };
+const tool: TranscriptTool = {
+	transcriptRole: "tool",
+	setTranscriptLayout: () => {},
+	render: () => ["tool row"],
+	invalidate: () => {},
+};
 
 function transcript(children: TranscriptContainer["children"], rows = 40): TranscriptContainer {
 	const container = new TranscriptContainer(
@@ -51,6 +59,34 @@ function transcript(children: TranscriptContainer["children"], rows = 40): Trans
 
 function plain(lines: string[]): string[] {
 	return lines.map((line) => stripAnsi(line).trimEnd());
+}
+
+const fakeTui = { requestRender: () => {} } as unknown as TUI;
+
+function toolCall(name: string, args: unknown, renderers: ToolRenderers | undefined): ToolExecutionComponent {
+	const component = new ToolExecutionComponent(name, `${name}-call`, args, {}, renderers, fakeTui, "/work");
+	component.updateResult({ content: [{ type: "text", text: "contents" }], isError: false, durationMs: 1500 });
+	return component;
+}
+
+function readCall(path: string): ToolExecutionComponent {
+	return toolCall("read", { path }, withBuiltInRenderers("read", undefined));
+}
+
+function click(container: TranscriptContainer, y: number, height: number): void {
+	container.handleMouse({
+		type: "click",
+		button: "left",
+		x: 5,
+		y,
+		screenX: 5,
+		screenY: y,
+		width: 100,
+		height,
+		shift: false,
+		alt: false,
+		ctrl: false,
+	});
 }
 
 describe("TranscriptContainer", () => {
@@ -111,20 +147,62 @@ describe("TranscriptContainer", () => {
 		const lines = container.render(100);
 		const y = plain(lines).indexOf("   deliberating");
 
-		container.handleMouse({
-			type: "click",
-			button: "left",
-			x: 5,
-			y,
-			screenX: 5,
-			screenY: y,
-			width: 100,
-			height: lines.length,
-			shift: false,
-			alt: false,
-			ctrl: false,
-		});
+		click(container, y, lines.length);
 
 		expect(plain(container.render(100))).toContain("   Thinking...");
+	});
+});
+
+describe("transcript tool rows", () => {
+	beforeAll(() => initTheme("dark"));
+
+	const row = (path: string) => `   ✓ □ Read   ${path}${" ".repeat(74)}1.5s`;
+
+	test("draws each tool call as one row, with a blank line only before the first", () => {
+		const lines = transcript([answer("checking"), readCall("src/a.ts"), readCall("src/b.ts")]).render(100);
+
+		expect(plain(lines)).toEqual(["", ` ● Pi · ${TIME}`, "   checking", "", row("src/a.ts"), row("src/b.ts")]);
+	});
+
+	test("keeps rows together across Pi messages that only call tools", () => {
+		const callOnly = assistant([{ type: "toolCall", id: "b", name: "read", arguments: { path: "src/b.ts" } }]);
+		const lines = transcript([answer("checking"), readCall("src/a.ts"), callOnly, readCall("src/b.ts")]).render(100);
+
+		expect(plain(lines)).toEqual(["", ` ● Pi · ${TIME}`, "   checking", "", row("src/a.ts"), row("src/b.ts")]);
+	});
+
+	test("expands a call's full output on a click and collapses it on the next", () => {
+		const container = transcript([readCall("src/a.ts")]);
+		const collapsed = plain(container.render(100));
+		const y = collapsed.indexOf(row("src/a.ts"));
+
+		click(container, y, collapsed.length);
+		const expanded = plain(container.render(100));
+		expect(expanded.slice(0, 2)).toEqual(collapsed);
+		expect(expanded.some((line) => /read src\/a\.ts/.test(line))).toBe(true);
+		expect(expanded.some((line) => line.includes("contents"))).toBe(true);
+
+		click(container, y, expanded.length);
+		expect(plain(container.render(100))).toEqual(collapsed);
+	});
+
+	test("hides a collapsed call's output and names tools without a summary", () => {
+		const lines = plain(transcript([toolCall("deploy", { env: "prod" }, undefined)]).render(100));
+
+		expect(lines).toEqual(["", `   ✓ ⌇ deploy env="prod"${" ".repeat(72)}1.5s`]);
+	});
+
+	test("summarizes a call again only when it changes", () => {
+		const summarize = vi.fn(() => ({ label: "Peek" }));
+		const call = toolCall("peek", {}, { summarize });
+		const container = transcript([call]);
+
+		container.render(100);
+		container.render(100);
+		expect(summarize).toHaveBeenCalledTimes(1);
+
+		call.updateResult({ content: [], isError: true });
+		expect(plain(container.render(100))[1]).toBe("   × Peek");
+		expect(summarize).toHaveBeenCalledTimes(2);
 	});
 });

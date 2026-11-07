@@ -9,12 +9,21 @@ export interface TranscriptLayout {
 
 export interface TranscriptMessage extends Component {
 	readonly transcriptRole: "user" | "pi";
+	readonly isEmpty: boolean;
 	setTranscriptLayout(layout: TranscriptLayout): void;
+}
+
+export interface TranscriptToolLayout {
+	readonly leadingBlank: boolean;
+	readonly bodyPadding: number;
 }
 
 export interface TranscriptTool extends Component {
 	readonly transcriptRole: "tool";
+	setTranscriptLayout(layout: TranscriptToolLayout): void;
 }
+
+type TranscriptRole = (TranscriptMessage | TranscriptTool)["transcriptRole"];
 
 const NARROW_WIDTH = 80;
 const SHORT_WINDOW_ROWS = 24;
@@ -38,20 +47,28 @@ export class TranscriptContainer extends Container {
 		const tight = this.getRows() < SHORT_WINDOW_ROWS;
 
 		let speaker: "user" | "pi" | undefined;
+		let previousRole: TranscriptRole | undefined;
 		for (const child of this.children) {
-			const role =
-				"transcriptRole" in child ? (child as TranscriptMessage | TranscriptTool).transcriptRole : undefined;
-			if (role === "tool") continue;
-			if (role === undefined) {
+			const role = transcriptRole(child);
+			if (role === "tool") {
+				const leadingBlank = previousRole !== "tool" && !tight;
+				(child as TranscriptTool).setTranscriptLayout({ leadingBlank, bodyPadding });
+			} else if (role === undefined) {
 				speaker = undefined;
-				continue;
+			} else {
+				const message = child as TranscriptMessage;
+				const showHeader = role === "user" || speaker !== "pi";
+				message.setTranscriptLayout({ showHeader, tight, headerPadding, bodyPadding });
+				speaker = role;
+				if (message.isEmpty) continue;
 			}
-
-			const showHeader = role === "user" || speaker !== "pi";
-			(child as TranscriptMessage).setTranscriptLayout({ showHeader, tight, headerPadding, bodyPadding });
-			speaker = role;
+			previousRole = role;
 		}
 
 		return super.render(width);
 	}
+}
+
+function transcriptRole(child: Component): TranscriptRole | undefined {
+	return "transcriptRole" in child ? (child as TranscriptMessage | TranscriptTool).transcriptRole : undefined;
 }

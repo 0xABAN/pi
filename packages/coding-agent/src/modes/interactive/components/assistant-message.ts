@@ -112,6 +112,10 @@ export class AssistantMessageComponent extends Container implements TranscriptMe
 		}
 	}
 
+	get isEmpty(): boolean {
+		return !this.header.visible && this.contentContainer.children.length === 0;
+	}
+
 	setTranscriptLayout(layout: TranscriptLayout): void {
 		if (layout.bodyPadding !== this.outputPad) {
 			this.setOutputPad(layout.bodyPadding);
