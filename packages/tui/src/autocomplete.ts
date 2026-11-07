@@ -6,6 +6,7 @@ import { fuzzyFilter } from "./fuzzy.ts";
 import { autocompleteBoundaryRegex, autocompleteSeparatorRegex } from "./utils.ts";
 
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
+export const inlineSlashTokenRegex = /(?:^|\s)\/([a-z0-9:-]*)$/;
 const tokenStartRegex = new RegExp(`${autocompleteBoundaryRegex.source}$`, "u");
 // Opening wrappers that may precede a path in prose, mapped to their closing counterpart.
 const PATH_WRAPPERS: Record<string, string> = { "(": ")", "[": "]", "{": "}", "<": ">", "`": "`" };
@@ -332,23 +333,18 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 			};
 		}
 
+		const inlineSkillPrefix = options.force ? null : this.extractInlineSkillPrefix(cursorLine, textBeforeCursor);
+		if (inlineSkillPrefix !== null) {
+			return this.getInlineSkillSuggestions(inlineSkillPrefix);
+		}
+
 		const commandText = textBeforeCursor.trimStart();
 		if (!options.force && commandText.startsWith("/")) {
 			const spaceIndex = commandText.indexOf(" ");
 
 			if (spaceIndex === -1) {
 				const prefix = commandText.slice(1);
-				const commandItems = this.commands.map((cmd) => {
-					const name = "name" in cmd ? cmd.name : cmd.value;
-					const hint = "argumentHint" in cmd && cmd.argumentHint ? cmd.argumentHint : undefined;
-					const desc = cmd.description ?? "";
-					const fullDesc = hint ? (desc ? `${hint} — ${desc}` : hint) : desc;
-					return {
-						name,
-						label: name,
-						description: fullDesc || undefined,
-					};
-				});
+				const commandItems = this.getCommandItems();
 
 				const bareNameMatches = fuzzyFilter(commandItems, prefix, (item) =>
 					item.name.startsWith("skill:") ? item.name.slice("skill:".length) : item.name,
@@ -420,6 +416,18 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 		const beforePrefix = currentLine.slice(0, cursorCol - prefix.length);
 		const afterCursor = currentLine.slice(cursorCol);
 		const isQuotedPrefix = prefix.startsWith('"') || prefix.startsWith('@"');
+
+		if (!prefix.startsWith("/") && item.value.startsWith("skill:")) {
+			const separator = /^\s/.test(afterCursor) ? "" : " ";
+			const newLines = [...lines];
+			newLines[cursorLine] = beforePrefix + item.value + separator + afterCursor;
+			return {
+				lines: newLines,
+				cursorLine,
+				cursorCol: beforePrefix.length + item.value.length + separator.length,
+			};
+		}
+
 		const hasLeadingQuoteAfterCursor = afterCursor.startsWith('"');
 		const hasTrailingQuoteInItem = item.value.endsWith('"');
 		const adjustedAfterCursor =
@@ -514,6 +522,41 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 	}
 
 	// Extract a path-like prefix from the text before cursor
+	private getCommandItems(): { name: string; label: string; description: string | undefined }[] {
+		return this.commands.map((cmd) => {
+			const name = "name" in cmd ? cmd.name : cmd.value;
+			const hint = "argumentHint" in cmd && cmd.argumentHint ? cmd.argumentHint : undefined;
+			const desc = cmd.description ?? "";
+			const fullDesc = hint ? (desc ? `${hint} — ${desc}` : hint) : desc;
+			return {
+				name,
+				label: name,
+				description: fullDesc || undefined,
+			};
+		});
+	}
+
+	private extractInlineSkillPrefix(cursorLine: number, textBeforeCursor: string): string | null {
+		const match = textBeforeCursor.match(inlineSlashTokenRegex);
+		if (!match) return null;
+
+		const tokenStart = textBeforeCursor.length - match[1]!.length - 1;
+		const leadsMessage = cursorLine === 0 && textBeforeCursor.slice(0, tokenStart).trim() === "";
+		return leadsMessage ? null : match[1]!;
+	}
+
+	private getInlineSkillSuggestions(prefix: string): AutocompleteSuggestions | null {
+		const skills = this.getCommandItems().filter((item) => item.name.startsWith("skill:"));
+		const items = fuzzyFilter(skills, prefix.replace(/^skill:/, ""), (item) => item.name.slice("skill:".length)).map(
+			(item) => ({
+				value: item.name,
+				label: item.label,
+				...(item.description && { description: item.description }),
+			}),
+		);
+		return items.length > 0 ? { items, prefix } : null;
+	}
+
 	private extractPathPrefix(text: string, forceExtract: boolean = false): string | null {
 		const quotedPrefix = extractQuotedPrefix(text);
 		if (quotedPrefix) {

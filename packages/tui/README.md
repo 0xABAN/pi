@@ -474,6 +474,8 @@ editor.getPaddingX();  // Get current padding
 
 Subclasses can change the frame. `maxVisibleLines()` sets how many wrapped lines show before the editor scrolls (default: 30% of the terminal height, at least 5), `renderTopBorder(width, hiddenLineCount)` and `renderBottomBorder(width, hiddenLineCount)` draw the rules, and `borderStyle(text)` colors each piece of them (default: `borderColor`). After `render()`, the `renderedVisibleLineCount` field holds the number of content lines between them.
 
+`setHighlighter((line) => highlights)` styles parts of the text. It is called with each displayed line and returns `{ start, end, style }` ranges in that line, sorted and not overlapping; `style` wraps the range's text, for example in a color.
+
 **Key Bindings:**
 - `Enter` - Submit
 - `Shift+Enter`, `Ctrl+Enter`, or `Alt+Enter` - New line (terminal-dependent, Alt+Enter most reliable)
@@ -718,6 +720,7 @@ editor.setAutocompleteProvider(provider);
 
 **Features:**
 - Type `/` to see slash commands
+- Type `/` after a space to see commands named `skill:…`, filtered by the rest of the name; choosing one inserts `/skill:name ` in place
 - Press `Tab` for file path completion
 - Works with `~/`, `./`, `../`, and `@` prefix
 - Filters to attachable files for `@` prefix

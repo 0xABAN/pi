@@ -1,4 +1,4 @@
-import type { AutocompleteProvider, AutocompleteSuggestions } from "../autocomplete.ts";
+import { type AutocompleteProvider, type AutocompleteSuggestions, inlineSlashTokenRegex } from "../autocomplete.ts";
 import { getKeybindings } from "../keybindings.ts";
 import { decodePrintableKey, matchesKey } from "../keys.ts";
 import { KillRing } from "../kill-ring.ts";
@@ -240,6 +240,27 @@ export interface EditorTheme {
 	selectList: SelectListTheme;
 }
 
+export interface EditorHighlight {
+	start: number;
+	end: number;
+	style: (text: string) => string;
+}
+
+export type EditorHighlighter = (line: string) => readonly EditorHighlight[];
+
+function applyHighlights(text: string, from: number, to: number, highlights: readonly EditorHighlight[]): string {
+	let result = "";
+	let position = from;
+	for (const { start, end, style } of highlights) {
+		const rangeStart = Math.max(start, position);
+		const rangeEnd = Math.min(end, to);
+		if (rangeStart >= rangeEnd) continue;
+		result += text.slice(position, rangeStart) + style(text.slice(rangeStart, rangeEnd));
+		position = rangeEnd;
+	}
+	return result + text.slice(position, to);
+}
+
 export interface EditorOptions {
 	paddingX?: number;
 	autocompleteMaxVisible?: number;
@@ -326,6 +347,7 @@ export class Editor implements Component, Focusable {
 
 	// Autocomplete support
 	private autocompleteProvider?: AutocompleteProvider;
+	private highlighter?: EditorHighlighter;
 	private autocompleteTriggerCharacters = [...DEFAULT_AUTOCOMPLETE_TRIGGER_CHARACTERS];
 	private autocompleteTriggerPattern = buildTriggerPattern(this.autocompleteTriggerCharacters);
 	private autocompleteDebouncePattern = buildDebouncePattern(this.autocompleteTriggerCharacters);
@@ -418,6 +440,10 @@ export class Editor implements Component, Focusable {
 			this.autocompleteMaxVisible = newMaxVisible;
 			this.tui.requestRender();
 		}
+	}
+
+	setHighlighter(highlighter: EditorHighlighter | undefined): void {
+		this.highlighter = highlighter;
 	}
 
 	setAutocompleteProvider(provider: AutocompleteProvider): void {
@@ -581,14 +607,17 @@ export class Editor implements Component, Focusable {
 		const emitCursorMarker = this.focused;
 
 		for (const layoutLine of visibleLines) {
-			let displayText = layoutLine.text;
-			let lineVisibleWidth = visibleWidth(layoutLine.text);
+			const text = layoutLine.text;
+			const highlights = this.highlighter?.(text) ?? [];
+			const styled = (from: number, to: number) => applyHighlights(text, from, to, highlights);
+			let displayText = styled(0, text.length);
+			let lineVisibleWidth = visibleWidth(text);
 			let cursorInPadding = false;
 
 			// Add cursor if this line has it
 			if (layoutLine.hasCursor && layoutLine.cursorPos !== undefined) {
-				const before = displayText.slice(0, layoutLine.cursorPos);
-				const after = displayText.slice(layoutLine.cursorPos);
+				const before = styled(0, layoutLine.cursorPos);
+				const after = text.slice(layoutLine.cursorPos);
 
 				// Hardware cursor marker (zero-width, emitted before fake cursor for IME positioning)
 				const marker = emitCursorMarker ? CURSOR_MARKER : "";
@@ -598,8 +627,9 @@ export class Editor implements Component, Focusable {
 					// Get the first grapheme from 'after'
 					const afterGraphemes = [...this.segment(after, "grapheme")];
 					const firstGrapheme = afterGraphemes[0]?.segment || "";
-					const restAfter = after.slice(firstGrapheme.length);
-					const cursor = renderFakeCursor(firstGrapheme);
+					const cursorEnd = layoutLine.cursorPos + firstGrapheme.length;
+					const restAfter = styled(cursorEnd, text.length);
+					const cursor = renderFakeCursor(styled(layoutLine.cursorPos, cursorEnd));
 					displayText = before + marker + cursor + restAfter;
 					// lineVisibleWidth stays the same - we're replacing, not adding
 				} else {
@@ -1243,8 +1273,8 @@ export class Editor implements Component, Focusable {
 
 		// Check if we should trigger or update autocomplete
 		if (!this.autocompleteState) {
-			// Auto-trigger for "/" at the start of a line (slash commands)
-			if (char === "/" && this.isAtStartOfMessage()) {
+			// Auto-trigger for "/" at the start of a line (slash commands) or of a word (inline skills)
+			if (char === "/" && (this.isAtStartOfMessage() || this.isInInlineSlashToken())) {
 				this.tryTriggerAutocomplete();
 			}
 			// Auto-trigger for symbol-based completion like @, #, or provider triggers at token boundaries
@@ -1260,7 +1290,7 @@ export class Editor implements Component, Focusable {
 				const currentLine = this.state.lines[this.state.cursorLine] || "";
 				const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
 				// Check if we're in a slash command (with or without space for arguments)
-				if (this.isInSlashCommandContext(textBeforeCursor)) {
+				if (this.isInSlashCommandContext(textBeforeCursor) || inlineSlashTokenRegex.test(textBeforeCursor)) {
 					this.tryTriggerAutocomplete();
 				}
 				// Check if we're in a symbol-based completion context like @, #, or provider triggers
@@ -2212,6 +2242,11 @@ export class Editor implements Component, Focusable {
 		const currentLine = this.state.lines[this.state.cursorLine] || "";
 		const beforeCursor = currentLine.slice(0, this.state.cursorCol);
 		return beforeCursor.trim() === "" || beforeCursor.trim() === "/";
+	}
+
+	private isInInlineSlashToken(): boolean {
+		const currentLine = this.state.lines[this.state.cursorLine] || "";
+		return inlineSlashTokenRegex.test(currentLine.slice(0, this.state.cursorCol));
 	}
 
 	private isInSlashCommandContext(textBeforeCursor: string): boolean {
