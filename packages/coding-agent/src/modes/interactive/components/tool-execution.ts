@@ -321,7 +321,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		const layout = this.transcriptLayout;
 		if (layout?.index !== 0) return [];
 
-		const lines = layout.tight ? [] : [""];
+		const lines = [""];
 		if (layout.groupSize > 1) {
 			const header = `${" ".repeat(layout.bodyPadding)}${theme.fg("muted", `${layout.groupSize} actions`)}`;
 			lines.push(truncateToWidth(header, width, "…"));

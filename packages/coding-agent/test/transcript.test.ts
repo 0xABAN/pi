@@ -48,11 +48,8 @@ const tool: TranscriptTool = {
 	invalidate: () => {},
 };
 
-function transcript(children: TranscriptContainer["children"], rows = 40): TranscriptContainer {
-	const container = new TranscriptContainer(
-		() => 1,
-		() => rows,
-	);
+function transcript(children: TranscriptContainer["children"]): TranscriptContainer {
+	const container = new TranscriptContainer(() => 1);
 	for (const child of children) container.addChild(child);
 	return container;
 }
@@ -120,10 +117,6 @@ describe("TranscriptContainer", () => {
 			"   question",
 		]);
 		expect(plain(transcript([user("question")]).render(60)).slice(0, 2)).toEqual([` ◆ You · ${TIME}`, " question"]);
-	});
-
-	test("drops the blank row before the Pi header in short windows", () => {
-		expect(plain(transcript([answer("short")], 20).render(100))).toEqual([` ● Pi · ${TIME}`, "   short"]);
 	});
 
 	test("draws user messages without their shaded background only inside the transcript", () => {
@@ -205,17 +198,6 @@ describe("transcript tool rows", () => {
 
 		expect(plain(lines)).not.toContain("   2 actions");
 		expect(plain(lines).filter((text) => text === row("src/a.ts") || text === row("src/b.ts"))).toHaveLength(2);
-	});
-
-	test("drops the blank line but keeps the actions line in a short window", () => {
-		const lines = transcript([answer("checking"), readCall("src/a.ts"), readCall("src/b.ts")], 10).render(100);
-
-		expect(plain(lines).slice(-3)).toEqual([
-			"   2 actions",
-			line("   ├─ ✓ □ Read   src/a.ts"),
-			line("   ╰─ ✓ □ Read   src/b.ts"),
-		]);
-		expect(plain(lines).at(-4)).toBe("   checking");
 	});
 
 	test("expands a call's output right below its row and collapses it on the next click", () => {

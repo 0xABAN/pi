@@ -2,7 +2,6 @@ import { type Component, Container } from "@earendil-works/pi-tui";
 
 export interface TranscriptLayout {
 	readonly showHeader: boolean;
-	readonly tight: boolean;
 	readonly headerPadding: number;
 	readonly bodyPadding: number;
 }
@@ -16,7 +15,6 @@ export interface TranscriptMessage extends Component {
 export interface TranscriptToolLayout {
 	readonly index: number;
 	readonly groupSize: number;
-	readonly tight: boolean;
 	readonly bodyPadding: number;
 }
 
@@ -28,16 +26,13 @@ export interface TranscriptTool extends Component {
 type TranscriptRole = (TranscriptMessage | TranscriptTool)["transcriptRole"];
 
 const NARROW_WIDTH = 80;
-const SHORT_WINDOW_ROWS = 24;
 
 export class TranscriptContainer extends Container {
 	private readonly getPadding: () => number;
-	private readonly getRows: () => number;
 
-	constructor(getPadding: () => number, getRows: () => number) {
+	constructor(getPadding: () => number) {
 		super();
 		this.getPadding = getPadding;
-		this.getRows = getRows;
 	}
 
 	override render(width: number): string[] {
@@ -46,13 +41,12 @@ export class TranscriptContainer extends Container {
 			width < NARROW_WIDTH ? 1 : headerPadding + 2,
 			Math.max(0, Math.floor((width - 2) / 2)),
 		);
-		const tight = this.getRows() < SHORT_WINDOW_ROWS;
 
 		let speaker: "user" | "pi" | undefined;
 		let tools: TranscriptTool[] = [];
 		const endToolGroup = () => {
 			tools.forEach((tool, index) => {
-				tool.setTranscriptLayout({ index, groupSize: tools.length, tight, bodyPadding });
+				tool.setTranscriptLayout({ index, groupSize: tools.length, bodyPadding });
 			});
 			tools = [];
 		};
@@ -67,7 +61,7 @@ export class TranscriptContainer extends Container {
 			} else {
 				const message = child as TranscriptMessage;
 				const showHeader = role === "user" || speaker !== "pi";
-				message.setTranscriptLayout({ showHeader, tight, headerPadding, bodyPadding });
+				message.setTranscriptLayout({ showHeader, headerPadding, bodyPadding });
 				speaker = role;
 				if (!message.isEmpty) endToolGroup();
 			}

@@ -639,10 +639,7 @@ export class InteractiveMode {
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
 		this.headerContainer = new Container();
 		this.loadedResourcesContainer = new Container();
-		this.chatContainer = new TranscriptContainer(
-			() => this.outputPad,
-			() => this.ui.terminal.rows,
-		);
+		this.chatContainer = new TranscriptContainer(() => this.outputPad);
 		this.documentContainer = new Container();
 		this.documentContainer.addChild(this.headerContainer);
 		this.documentContainer.addChild(this.loadedResourcesContainer);
