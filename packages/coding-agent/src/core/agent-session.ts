@@ -137,6 +137,7 @@ import {
 	DEFAULT_TOOL_NAMES,
 	type SettingsManager,
 } from "./settings-manager.ts";
+import { findSkillReferences } from "./skills.ts";
 import type { SlashCommandInfo } from "./slash-commands.ts";
 import { BUILTIN_PATH_PREFIX, createSyntheticSourceInfo, isSyntheticPath, type SourceInfo } from "./source-info.ts";
 import {
@@ -180,22 +181,27 @@ export interface ParsedSkillBlock {
 	name: string;
 	location: string;
 	content: string;
+}
+
+export interface ParsedSkillInvocation {
+	skills: ParsedSkillBlock[];
 	userMessage: string | undefined;
 }
 
+const SKILL_BLOCK_REGEX = /^<skill name="([^"]+)" location="([^"]+)">\n([\s\S]*?)\n<\/skill>(?:\n\n|$)/;
+
 /**
- * Parse a skill block from message text.
- * Returns null if the text doesn't contain a skill block.
+ * Parse the skill blocks at the start of message text.
+ * Returns null if the text doesn't start with a skill block.
  */
-export function parseSkillBlock(text: string): ParsedSkillBlock | null {
-	const match = text.match(/^<skill name="([^"]+)" location="([^"]+)">\n([\s\S]*?)\n<\/skill>(?:\n\n([\s\S]+))?$/);
-	if (!match) return null;
-	return {
-		name: match[1],
-		location: match[2],
-		content: match[3],
-		userMessage: match[4]?.trim() || undefined,
-	};
+export function parseSkillBlocks(text: string): ParsedSkillInvocation | null {
+	const skills: ParsedSkillBlock[] = [];
+	let rest = text;
+	for (let match = SKILL_BLOCK_REGEX.exec(rest); match; match = SKILL_BLOCK_REGEX.exec(rest)) {
+		skills.push({ name: match[1]!, location: match[2]!, content: match[3]! });
+		rest = rest.slice(match[0].length);
+	}
+	return skills.length > 0 ? { skills, userMessage: rest.trim() || undefined } : null;
 }
 
 /** Tool execution events of calls a tool made through `ctx.executeTool()` carry `parentToolCallId`. */
@@ -2153,11 +2159,11 @@ export class AgentSession {
 		}
 		const { text: currentText, images: currentImages } = processedInput;
 
-		// Expand skill commands (/skill:name args) and prompt templates (/template args)
+		// Expand prompt templates (/template args) and skill references (/skill:name anywhere)
 		let expandedText = currentText;
 		if (expandPromptTemplates) {
-			expandedText = this._expandSkillCommand(expandedText);
 			expandedText = expandPromptTemplate(expandedText, [...this.promptTemplates]);
+			expandedText = this._expandSkillReferences(expandedText);
 		}
 
 		// If streaming, queue via steer() or followUp() based on option
@@ -2231,34 +2237,34 @@ export class AgentSession {
 	}
 
 	/**
-	 * Expand skill commands (/skill:name args) to their full content.
-	 * Returns the expanded text, or the original text if not a skill command or skill not found.
-	 * Emits errors via extension runner if file read fails.
+	 * Load each skill the text references (/skill:name anywhere) once, ahead of the unchanged text.
+	 * Returns the original text if it references no skill, already starts with loaded skills, or a skill file
+	 * cannot be read. Emits errors via extension runner if file read fails.
 	 */
-	private _expandSkillCommand(text: string): string {
-		if (!text.startsWith("/skill:")) return text;
+	private _expandSkillReferences(text: string): string {
+		if (parseSkillBlocks(text)) return text;
 
-		const spaceIndex = text.indexOf(" ");
-		const skillName = spaceIndex === -1 ? text.slice(7) : text.slice(7, spaceIndex);
-		const args = spaceIndex === -1 ? "" : text.slice(spaceIndex + 1).trim();
+		const references = findSkillReferences(text, this.resourceLoader.getSkills().skills);
+		const skills = [...new Set(references.map((reference) => reference.skill))];
+		if (skills.length === 0) return text;
 
-		const skill = this.resourceLoader.getSkills().skills.find((s) => s.name === skillName);
-		if (!skill) return text; // Unknown skill, pass through
-
-		try {
-			const content = readFileSync(skill.filePath, "utf-8");
-			const body = stripFrontmatter(content).trim();
-			const skillBlock = `<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${body}\n</skill>`;
-			return args ? `${skillBlock}\n\n${args}` : skillBlock;
-		} catch (err) {
-			// Emit error like extension commands do
-			this._extensionRunner.emitError({
-				extensionPath: skill.filePath,
-				event: "skill_expansion",
-				error: err instanceof Error ? err.message : String(err),
-			});
-			return text; // Return original on error
+		const blocks: string[] = [];
+		for (const skill of skills) {
+			try {
+				const body = stripFrontmatter(readFileSync(skill.filePath, "utf-8")).trim();
+				blocks.push(
+					`<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${body}\n</skill>`,
+				);
+			} catch (err) {
+				this._extensionRunner.emitError({
+					extensionPath: skill.filePath,
+					event: "skill_expansion",
+					error: err instanceof Error ? err.message : String(err),
+				});
+				return text;
+			}
 		}
+		return `${blocks.join("\n\n")}\n\n${text}`;
 	}
 
 	private async _queueUserInput(
@@ -2279,8 +2285,8 @@ export class AgentSession {
 		);
 		if (!processedInput) return "handled";
 
-		let expandedText = this._expandSkillCommand(processedInput.text);
-		expandedText = expandPromptTemplate(expandedText, [...this.promptTemplates]);
+		let expandedText = expandPromptTemplate(processedInput.text, [...this.promptTemplates]);
+		expandedText = this._expandSkillReferences(expandedText);
 
 		if (behavior === "steer") {
 			await this._queueSteer(expandedText, processedInput.images);

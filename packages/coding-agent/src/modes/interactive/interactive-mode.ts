@@ -21,6 +21,7 @@ import type {
 	AutocompleteItem,
 	AutocompleteProvider,
 	EditorComponent,
+	EditorHighlighter,
 	Keybinding,
 	KeyId,
 	MarkdownTheme,
@@ -63,7 +64,7 @@ import {
 	getDocsPath,
 	VERSION,
 } from "../../config.ts";
-import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.ts";
+import { type AgentSession, type AgentSessionEvent, parseSkillBlocks } from "../../core/agent-session.ts";
 import { type AgentSessionRuntime, SessionImportFileNotFoundError } from "../../core/agent-session-runtime.ts";
 import type { AgentSessionRuntimeDiagnostic } from "../../core/agent-session-services.ts";
 import {
@@ -111,6 +112,7 @@ import {
 	type UsageEntry,
 } from "../../core/session-manager.ts";
 import type { FullscreenExitOutput, TuiMode } from "../../core/settings-manager.ts";
+import { findSkillReferences } from "../../core/skills.ts";
 import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.ts";
 import { getSourcePackageKey, type SourceInfo } from "../../core/source-info.ts";
 import { isInstallTelemetryEnabled } from "../../core/telemetry.ts";
@@ -470,6 +472,12 @@ export class InteractiveMode {
 	private editor: ActiveEditor;
 	private editorComponentFactory: EditorFactory | undefined;
 	private autocompleteProvider: AutocompleteProvider | undefined;
+	private readonly editorHighlighter: EditorHighlighter = (line) =>
+		findSkillReferences(line, this.session.resourceLoader.getSkills().skills).map(({ start, end }) => ({
+			start,
+			end,
+			style: (text: string) => theme.fg("customMessageLabel", text),
+		}));
 	private autocompleteProviderWrappers: AutocompleteProviderFactory[] = [];
 	private fdPath: string | undefined;
 	private editorContainer: Container;
@@ -657,6 +665,7 @@ export class InteractiveMode {
 			autocompleteMaxVisible,
 			embedWorkingStatus: true,
 		});
+		this.defaultEditor.setHighlighter(this.editorHighlighter);
 		this.editor = this.defaultEditor;
 		this.editorContainer = new Container();
 		this.editorContainer.addChild(this.editor as Component);
@@ -2928,6 +2937,7 @@ export class InteractiveMode {
 			if (newEditor.setAutocompleteProvider && this.autocompleteProvider) {
 				newEditor.setAutocompleteProvider(this.autocompleteProvider);
 			}
+			newEditor.setHighlighter?.(this.editorHighlighter);
 
 			// If extending CustomEditor, copy app-level handlers
 			// Use duck typing since instanceof fails across jiti module boundaries
@@ -3963,21 +3973,21 @@ export class InteractiveMode {
 					if (this.chatContainer.children.length > 0) {
 						this.chatContainer.addChild(new Spacer(1));
 					}
-					const skillBlock = parseSkillBlock(textContent);
-					if (skillBlock) {
-						// Render skill block (collapsible)
+					const skillInvocation = parseSkillBlocks(textContent);
+					if (skillInvocation) {
+						// Render skill blocks (collapsible)
 						const component = new SkillInvocationMessageComponent(
-							skillBlock,
+							skillInvocation.skills,
 							this.getMarkdownThemeWithSettings(),
 							this.outputPad,
 						);
 						component.setExpanded(this.toolOutputExpanded);
 						this.chatContainer.addChild(component);
 						// Render user message separately if present
-						if (skillBlock.userMessage) {
+						if (skillInvocation.userMessage) {
 							this.chatContainer.addChild(new Spacer(1));
 							const userComponent = new UserMessageComponent(
-								skillBlock.userMessage,
+								skillInvocation.userMessage,
 								this.getMarkdownThemeWithSettings(),
 								this.outputPad,
 								this.getMarkdownTransformers(),

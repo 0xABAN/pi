@@ -44,11 +44,14 @@ At startup, Pi scans configured skill locations and adds each skill’s name, de
 
 When a task matches, the model reads `SKILL.md` and follows its instructions. This keeps detailed guidance out of context until it is needed. A model might fail to load a relevant skill, so use `/skill:name` when you need to force it.
 
-Arguments after `/skill:name` are appended to the loaded instructions as a user request:
+Write `/skill:name` anywhere in a prompt, as often as you like. Pi loads each named skill once, ahead of your prompt, and sends the prompt unchanged:
 
 ```text
 /skill:pdf-tools extract report.pdf
+Summarize report.pdf using /skill:pdf-tools, then draft a reply with /skill:email.
 ```
+
+A reference is a word of its own, so `/skill:name` inside backticks or attached to other text stays plain text; punctuation right after the name, such as a comma, is fine. Names that match no installed skill stay plain text too. In the editor, references that will load are drawn in the `customMessageLabel` color, the color of the `[skill]` label in the transcript. Typing `/` after a space suggests skills, filtered by the rest of the name; choosing one inserts `/skill:name`. Prompt templates expand first, so a template can reference skills.
 
 Set `disable-model-invocation: true` in frontmatter when a skill should be available only through its explicit command. The `enableSkillCommands` [setting](settings.md) controls whether skill commands appear in interactive command discovery; manually entered `/skill:name` commands still work.
 

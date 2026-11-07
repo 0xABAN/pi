@@ -67,17 +67,27 @@ describe("collapsible message components", () => {
 	});
 
 	test("toggles a skill invocation when clicked", () => {
-		const component = new SkillInvocationMessageComponent({
-			name: "example-skill",
-			location: "/tmp/example-skill.md",
-			content: "skill details",
-			userMessage: undefined,
-		});
+		const component = new SkillInvocationMessageComponent([
+			{ name: "example-skill", location: "/tmp/example-skill.md", content: "skill details" },
+		]);
 
 		expect(renderText(component)).not.toContain("skill details");
 		clickRow(component, "[skill]");
 		expect(renderText(component)).toContain("skill details");
 		clickRow(component, "[skill]");
 		expect(renderText(component)).not.toContain("skill details");
+	});
+
+	test("lists every loaded skill and expands each one", () => {
+		const component = new SkillInvocationMessageComponent([
+			{ name: "plan", location: "/tmp/plan.md", content: "plan details" },
+			{ name: "trim", location: "/tmp/trim.md", content: "trim details" },
+		]);
+
+		expect(renderText(component)).toContain("[skill] plan · trim");
+		component.setExpanded(true);
+		const expanded = renderText(component);
+		expect(expanded.indexOf("plan details")).toBeLessThan(expanded.indexOf("trim"));
+		expect(expanded).toContain("trim details");
 	});
 });

@@ -314,7 +314,7 @@ A prompt starts a run. Input handling comes first:
 
 1. Extension commands (`/name`) run their handler. The `input` event does not fire. Typed and RPC prompts always check for commands; `pi.sendUserMessage()` checks only with `expandPromptTemplates: true`.
 2. `input` handlers can intercept, transform, or handle the text.
-3. Skill commands (`/skill:name`) and prompt templates (`/template`) expand.
+3. Prompt templates (`/template`) expand, then skill references (`/skill:name`, anywhere in the text) load.
 4. `before_agent_start` runs, then the agent loop starts.
 
 The run repeats turns, then checks whether more work starts another low-level agent run:
@@ -1114,8 +1114,8 @@ Fired when user input is received, after extension commands are checked but befo
 **Processing order:**
 1. Extension commands (`/cmd`) checked first - if found, handler runs and input event is skipped. Messages from `pi.sendUserMessage()` are checked only with `expandPromptTemplates: true`.
 2. `input` event fires - can intercept, transform, or handle
-3. If not handled: skill commands (`/skill:name`) expanded to skill content
-4. If not handled: prompt templates (`/template`) expanded to template content
+3. If not handled: prompt templates (`/template`) expanded to template content
+4. If not handled: skills referenced as `/skill:name` loaded ahead of the text
 5. Agent processing begins (`before_agent_start`, etc.)
 
 ```typescript

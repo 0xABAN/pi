@@ -11,6 +11,7 @@ import {
 } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseSkillBlocks } from "../../src/core/agent-session.ts";
 import type { BeforeAgentStartEvent, ExtensionAPI, InputEvent } from "../../src/core/extensions/index.ts";
 import type { PromptTemplate } from "../../src/core/prompt-templates.ts";
 import { createSyntheticSourceInfo } from "../../src/core/source-info.ts";
@@ -203,35 +204,30 @@ describe("AgentSession prompt characterization", () => {
 		});
 	});
 
-	it("expands skill commands before sending the prompt", async () => {
+	async function promptWithSkills(names: string[], prompt: string): Promise<string> {
 		const tempDir = join(tmpdir(), `pi-skill-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		mkdirSync(tempDir, { recursive: true });
 		tempDirs.push(tempDir);
-		const skillPath = join(tempDir, "test-skill.md");
-		writeFileSync(skillPath, "# Test Skill\n\nUse the skill body.");
-
-		const resourceLoader = {
-			...createTestResourceLoader(),
-			getSkills: () => ({
-				skills: [
-					{
-						name: "test",
-						description: "Test skill",
-						filePath: skillPath,
-						disableModelInvocation: false,
-						baseDir: tempDir,
-						sourceInfo: createSyntheticSourceInfo(skillPath, {
-							source: "local",
-							scope: "project",
-							origin: "top-level",
-							baseDir: tempDir,
-						}),
-					},
-				],
-				diagnostics: [],
-			}),
-		};
-		const harness = await createHarness({ resourceLoader });
+		const skills = names.map((name) => {
+			const filePath = join(tempDir, `${name}.md`);
+			writeFileSync(filePath, `# ${name}\n\nUse the ${name} body.`);
+			return {
+				name,
+				description: `${name} skill`,
+				filePath,
+				disableModelInvocation: false,
+				baseDir: tempDir,
+				sourceInfo: createSyntheticSourceInfo(filePath, {
+					source: "local",
+					scope: "project",
+					origin: "top-level",
+					baseDir: tempDir,
+				}),
+			};
+		});
+		const harness = await createHarness({
+			resourceLoader: { ...createTestResourceLoader(), getSkills: () => ({ skills, diagnostics: [] }) },
+		});
 		harnesses.push(harness);
 		let expandedPrompt = "";
 
@@ -243,11 +239,34 @@ describe("AgentSession prompt characterization", () => {
 			},
 		]);
 
-		await harness.session.prompt("/skill:test explain this");
+		await harness.session.prompt(prompt);
+		return expandedPrompt;
+	}
+
+	it("expands skill commands before sending the prompt", async () => {
+		const expandedPrompt = await promptWithSkills(["test"], "/skill:test explain this");
 
 		expect(expandedPrompt).toContain('<skill name="test" location="');
-		expect(expandedPrompt).toContain("Use the skill body.");
-		expect(expandedPrompt).toContain("explain this");
+		expect(expandedPrompt).toContain("Use the test body.");
+		expect(expandedPrompt).toMatch(/<\/skill>\n\n\/skill:test explain this$/);
+	});
+
+	it("loads each skill referenced anywhere once, ahead of the unchanged prompt", async () => {
+		const prompt = "use /skill:review then /skill:ship, again /skill:review, not `/skill:ship` or /skill:missing";
+		const expandedPrompt = await promptWithSkills(["review", "ship"], prompt);
+
+		expect(expandedPrompt.match(/<skill name=/g)).toHaveLength(2);
+		expect(expandedPrompt.indexOf('<skill name="review"')).toBeLessThan(expandedPrompt.indexOf('<skill name="ship"'));
+		expect(expandedPrompt.endsWith(`</skill>\n\n${prompt}`)).toBe(true);
+		expect(parseSkillBlocks(expandedPrompt)).toMatchObject({
+			skills: [{ name: "review" }, { name: "ship" }],
+			userMessage: prompt,
+		});
+	});
+
+	it("does not load skills mentioned only inside backticks", async () => {
+		const prompt = "explain `/skill:review`";
+		expect(await promptWithSkills(["review"], prompt)).toBe(prompt);
 	});
 
 	it("expands prompt templates before sending the prompt", async () => {
