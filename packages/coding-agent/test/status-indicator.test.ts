@@ -57,7 +57,7 @@ describe("status indicators", () => {
 		});
 		expect(editor.embedWorkingStatus).toBe(true);
 		editor.borderColor = theme.getThinkingBorderColor("high");
-		const indicator = new WorkingStatusIndicator(tui, "Working", undefined, (text) => editor.borderColor(text));
+		const indicator = new WorkingStatusIndicator(tui, "Working", (text) => editor.borderColor(text));
 		editor.setWorkingStatusIndicator(indicator);
 
 		const topBorder = editor.render(20)[0]!;

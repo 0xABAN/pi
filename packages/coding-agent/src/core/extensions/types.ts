@@ -132,10 +132,13 @@ export interface ExtensionWidgetOptions {
 /** Raw terminal input listener for extensions. */
 export type TerminalInputHandler = (data: string) => { consume?: boolean; data?: string } | undefined;
 
-/** Working indicator configuration for the interactive streaming loader. */
+/** Indicator configuration for the interactive status line. */
 export interface WorkingIndicatorOptions {
-	/** Animation frames. Use an empty array to hide the indicator entirely. Custom frames are rendered verbatim. */
-	frames?: string[];
+	/**
+	 * Animation frames drawn before the message, or a function that builds whole-line frames around the message.
+	 * Use an empty array to hide the indicator entirely. Custom frames are rendered verbatim.
+	 */
+	frames?: string[] | ((message: string) => string[]);
 	/** Frame interval in milliseconds for animated indicators. */
 	intervalMs?: number;
 }
@@ -187,11 +190,12 @@ export interface ExtensionUIContext {
 	setWorkingVisible(visible: boolean): void;
 
 	/**
-	 * Configure the interactive working indicator shown during streaming.
+	 * Configure the indicator on the interactive status line: working, compaction, branch summary, and retry.
 	 *
 	 * - Omit the argument to restore the default animated spinner.
 	 * - Use `frames: ["●"]` for a static indicator.
 	 * - Use `frames: []` to hide the indicator entirely.
+	 * - Use `frames: (message) => [...]` to draw the whole line around the current message.
 	 * - Custom frames are rendered as provided, so extensions must add their own colors.
 	 */
 	setWorkingIndicator(options?: WorkingIndicatorOptions): void;

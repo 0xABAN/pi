@@ -2367,6 +2367,7 @@ export class InteractiveMode {
 
 	private showStatusIndicator(indicator: StatusIndicator): void {
 		this.activeStatusIndicator?.dispose();
+		if (this.workingIndicatorOptions) indicator.setIndicator(this.workingIndicatorOptions);
 		this.activeStatusIndicator = indicator;
 		this.activeWorkingIndicatorEmbedded = false;
 		this.statusContainer.clear();
@@ -2405,12 +2406,7 @@ export class InteractiveMode {
 					(this.editor.borderColor ?? theme.getThinkingBorderColor(this.session.thinkingLevel || "off"))(text)
 			: undefined;
 		this.showStatusIndicator(
-			new WorkingStatusIndicator(
-				this.ui,
-				this.workingMessage ?? this.defaultWorkingMessage,
-				this.workingIndicatorOptions,
-				colorFn,
-			),
+			new WorkingStatusIndicator(this.ui, this.workingMessage ?? this.defaultWorkingMessage, colorFn),
 		);
 	}
 
@@ -2429,9 +2425,7 @@ export class InteractiveMode {
 
 	private setWorkingIndicator(options?: WorkingIndicatorOptions): void {
 		this.workingIndicatorOptions = options;
-		if (this.activeStatusIndicator?.kind === "working") {
-			this.activeStatusIndicator.setIndicator(options);
-		}
+		this.activeStatusIndicator?.setIndicator(options);
 		this.ui.requestRender();
 	}
 

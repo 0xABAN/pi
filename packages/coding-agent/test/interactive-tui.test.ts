@@ -2,6 +2,7 @@ import type { Component, Terminal, TUI, WheelScrollLines } from "@earendil-works
 import { Container, getKeybindings, isViewportTUI, ScrollView, setKeybindings, Text } from "@earendil-works/pi-tui";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { VirtualTerminal } from "../../tui/test/virtual-terminal.ts";
+import type { WorkingIndicatorOptions } from "../src/core/extensions/index.ts";
 import { KeybindingsManager } from "../src/core/keybindings.ts";
 import type { FullscreenExitOutput, TuiMode } from "../src/core/settings-manager.ts";
 import {
@@ -18,6 +19,7 @@ import {
 	InteractiveMode,
 } from "../src/modes/interactive/interactive-mode.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
+import { stripAnsi } from "../src/utils/ansi.ts";
 
 const clipboardMocks = vi.hoisted(() => ({
 	copyToClipboard: vi.fn<(text: string) => Promise<void>>(),
@@ -433,8 +435,9 @@ type ClearStatusContext = {
 	defaultEditor: StatusEditor;
 	editor: Partial<StatusEditor>;
 	options: { tuiMode?: TuiMode };
-	ui: { getClearOnShrink: () => boolean };
+	ui: { getClearOnShrink: () => boolean; requestRender?: () => void };
 	idleStatus: Component;
+	workingIndicatorOptions?: WorkingIndicatorOptions;
 	setEditorWorkingStatusIndicator(indicator: StatusIndicator | undefined): boolean;
 };
 
@@ -442,6 +445,7 @@ type InteractiveModePrototype = {
 	showStatusIndicator(this: ClearStatusContext, indicator: StatusIndicator): void;
 	clearStatusIndicator(this: ClearStatusContext, kind?: StatusIndicatorKind): void;
 	setEditorWorkingStatusIndicator(this: ClearStatusContext, indicator: StatusIndicator | undefined): boolean;
+	setWorkingIndicator(this: ClearStatusContext, options?: WorkingIndicatorOptions): void;
 };
 
 const interactiveModePrototype = InteractiveMode.prototype as unknown as InteractiveModePrototype;
@@ -484,6 +488,43 @@ describe("clear-on-shrink status spacing", () => {
 			}
 		} finally {
 			for (const indicator of indicators) indicator.dispose();
+		}
+	});
+
+	it("draws every status line with the custom working indicator", () => {
+		initTheme("dark");
+		const tui = { requestRender: vi.fn() } as unknown as TUI;
+		const context: ClearStatusContext = {
+			activeStatusIndicator: undefined,
+			activeWorkingIndicatorEmbedded: false,
+			statusContainer: new Container(),
+			defaultEditor: { embedWorkingStatus: true, setWorkingStatusIndicator: vi.fn() },
+			editor: { embedWorkingStatus: false, setWorkingStatusIndicator: vi.fn() },
+			options: { tuiMode: "regular" },
+			ui: { getClearOnShrink: () => true, requestRender: vi.fn() },
+			idleStatus: new Text("", 0, 0),
+			setEditorWorkingStatusIndicator: interactiveModePrototype.setEditorWorkingStatusIndicator,
+		};
+		const shownLine = (indicator: StatusIndicator) => stripAnsi(indicator.render(80)[0]!).trim();
+		const sparkle = { frames: (message: string) => [`✦ ${message} ✧`] };
+
+		const compaction = new CompactionStatusIndicator(tui, "manual");
+		const retry = new RetryStatusIndicator(tui, 1, 3, 1000);
+		try {
+			interactiveModePrototype.showStatusIndicator.call(context, compaction);
+			expect(shownLine(compaction)).toMatch(/^⠋ Compacting context\.\.\. /);
+
+			interactiveModePrototype.setWorkingIndicator.call(context, sparkle);
+			expect(shownLine(compaction)).toMatch(/^✦ Compacting context\.\.\. .* ✧$/);
+
+			interactiveModePrototype.showStatusIndicator.call(context, retry);
+			expect(shownLine(retry)).toMatch(/^✦ Retrying \(1\/3\) in 1s\.\.\. .* ✧$/);
+
+			interactiveModePrototype.setWorkingIndicator.call(context);
+			expect(shownLine(retry)).toMatch(/^⠋ Retrying \(1\/3\)/);
+		} finally {
+			compaction.dispose();
+			retry.dispose();
 		}
 	});
 

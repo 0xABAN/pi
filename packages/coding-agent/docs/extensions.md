@@ -2900,7 +2900,7 @@ ctx.ui.setWorkingMessage();  // Restore default
 ctx.ui.setWorkingVisible(false);  // Hide the built-in working loader row entirely
 ctx.ui.setWorkingVisible(true);   // Show the built-in working loader row
 
-// Working indicator (shown during streaming)
+// Indicator on the working, compaction, branch summary, and retry lines
 ctx.ui.setWorkingIndicator({ frames: [ctx.ui.theme.fg("accent", "●")] });  // Static dot
 ctx.ui.setWorkingIndicator({
   frames: [
@@ -2911,6 +2911,7 @@ ctx.ui.setWorkingIndicator({
   ],
   intervalMs: 120,
 });
+ctx.ui.setWorkingIndicator({ frames: (message) => [`✦ ${message} ✧`, `✧ ${message} ✦`] });  // Draw the whole line around the message
 ctx.ui.setWorkingIndicator({ frames: [] });  // Hide indicator
 ctx.ui.setWorkingIndicator();  // Restore default spinner
 
