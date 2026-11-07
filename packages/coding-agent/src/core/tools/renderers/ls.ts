@@ -9,7 +9,7 @@
 import { Text } from "@earendil-works/pi-tui";
 import { keyHint } from "../../../modes/interactive/components/keybinding-hints.ts";
 import type { Theme } from "../../../modes/interactive/theme/theme.ts";
-import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
+import type { ToolRenderers, ToolRenderResultOptions } from "../../extensions/types.ts";
 import type { LsToolDetails } from "../ls.ts";
 import { getTextOutput, renderToolPath, shortenPath, str } from "../render-utils.ts";
 import { DEFAULT_MAX_BYTES, formatSize } from "../truncate.ts";
@@ -56,7 +56,7 @@ function formatLsResult(
 	return text;
 }
 
-export const lsRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
+export const lsRenderers: ToolRenderers = {
 	renderCall(args, theme, context) {
 		const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 		text.setText(formatLsCall(args as any, theme, context.cwd));

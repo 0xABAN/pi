@@ -175,11 +175,7 @@ export const readRenderers: Pick<
 	},
 	summarize(rawArgs) {
 		const args = rawArgs as ReadRenderArgs | undefined;
-		const path = str(args?.file_path ?? args?.path);
-		return {
-			label: "Read",
-			icon: "□",
-			target: path ? shortenPath(path) + formatReadLineRange(args?.offset, args?.limit) : undefined,
-		};
+		const path = shortenPath(args?.file_path ?? args?.path);
+		return { label: "Read", icon: "□", target: path && path + formatReadLineRange(args?.offset, args?.limit) };
 	},
 };

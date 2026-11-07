@@ -9,7 +9,6 @@ import {
 	Text,
 	type TUI,
 	type TuiMouseEvent,
-	truncateToWidth,
 } from "@earendil-works/pi-tui";
 import type { ToolDefinition, ToolRenderContext, ToolRenderers, ToolSummary } from "../../../core/extensions/types.ts";
 
@@ -76,9 +75,12 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	private hideComponent = false;
 	private readonly outputGap = new Spacer(1);
 	private transcriptLayout?: TranscriptToolLayout;
+	private transcriptIndent = "";
+	private branch?: ToolBranch;
+	private outputPrefix = "";
 	private readonly transcriptView = new Container();
 	private revision = 0;
-	private rowCache?: { key: string; lines: string[] };
+	private rowCache?: { width: number; revision: number; lines: string[] };
 
 	constructor(
 		toolName: string,
@@ -116,7 +118,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 			this.addChild(this.contentTextRegion);
 		}
 
-		this.transcriptView.addChild({ render: (width) => this.renderGroupStart(width), invalidate: () => {} });
+		this.transcriptView.addChild({ render: () => this.renderGroupStart(), invalidate: () => {} });
 		this.transcriptView.addChild(
 			new MouseRegion({ render: (width) => this.renderRow(width), invalidate: () => {} }, (event) => {
 				if (event.type !== "click" || event.button !== "left") return undefined;
@@ -134,8 +136,24 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	}
 
 	setTranscriptLayout(layout: TranscriptToolLayout): void {
+		const previous = this.transcriptLayout;
 		this.transcriptLayout = layout;
 		this.outputGap.setLines(0);
+		if (
+			previous?.index === layout.index &&
+			previous.groupSize === layout.groupSize &&
+			previous.bodyPadding === layout.bodyPadding
+		) {
+			return;
+		}
+
+		this.transcriptIndent = " ".repeat(layout.bodyPadding);
+		this.branch = toolBranch(layout.index, layout.groupSize);
+		this.outputPrefix = this.branch ? this.transcriptIndent + this.branch.output : "";
+		this.revision++;
+
+		const outputPad = this.branch ? 1 : layout.bodyPadding;
+		if (outputPad !== this.outputPad) this.setOutputPad(outputPad);
 	}
 
 	private getCallRenderer(): ToolDefinition<any, any>["renderCall"] | undefined {
@@ -270,11 +288,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 
 	override render(width: number): string[] {
 		if (this.argsPending) this.updateDisplay();
-		if (!this.transcriptLayout) return this.renderBlock(width);
-
-		const outputPad = this.branch(width) ? 1 : this.transcriptLayout.bodyPadding;
-		if (outputPad !== this.outputPad) this.setOutputPad(outputPad);
-		return this.transcriptView.render(width);
+		return this.transcriptLayout ? this.transcriptView.render(width) : this.renderBlock(width);
 	}
 
 	private renderBlock(width: number): string[] {
@@ -317,59 +331,39 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 		return lines;
 	}
 
-	private renderGroupStart(width: number): string[] {
+	private renderGroupStart(): string[] {
 		const layout = this.transcriptLayout;
 		if (layout?.index !== 0) return [];
-
-		const lines = [""];
-		if (layout.groupSize > 1) {
-			const header = `${" ".repeat(layout.bodyPadding)}${theme.fg("muted", `${layout.groupSize} actions`)}`;
-			lines.push(truncateToWidth(header, width, "…"));
-		}
-		return lines;
+		if (layout.groupSize < 2) return [""];
+		return ["", this.transcriptIndent + theme.fg("muted", `${layout.groupSize} actions`)];
 	}
 
 	private renderRow(width: number): string[] {
-		const layout = this.transcriptLayout;
-		const bodyPadding = layout?.bodyPadding ?? 0;
-		const key = `${width} ${this.revision} ${layout?.index} ${layout?.groupSize} ${bodyPadding}`;
-		if (this.rowCache?.key === key) return this.rowCache.lines;
+		if (this.rowCache?.width === width && this.rowCache.revision === this.revision) return this.rowCache.lines;
 
-		const indent = " ".repeat(bodyPadding);
-		const rowWidth = Math.max(1, width - bodyPadding);
-		const lines = renderToolRow(this.summarize(), this.rowState(), rowWidth, this.branch(width)).map(
+		const indent = this.transcriptIndent;
+		const lines = renderToolRow(this.summarize(), this.rowState(), width - indent.length, this.branch).map(
 			(line) => indent + line,
 		);
-		this.rowCache = { key, lines };
+		this.rowCache = { width, revision: this.revision, lines };
 		return lines;
 	}
 
 	private renderOutput(width: number): string[] {
-		const prefix = this.outputPrefix(width);
-		const outputWidth = width - prefix.length;
+		const outputWidth = width - this.outputPrefix.length;
 		const lines = this.expanded ? this.renderBlock(outputWidth) : this.renderImages(outputWidth);
-		if (!prefix) return lines;
+		if (!this.outputPrefix) return lines;
 
-		const styledPrefix = theme.fg("borderMuted", prefix);
-		return lines.map((line) => styledPrefix + line);
+		const prefix = theme.fg("borderMuted", this.outputPrefix);
+		return lines.map((line) => prefix + line);
 	}
 
 	private handleOutputMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.expanded) return undefined;
 
-		const offset = this.outputPrefix(event.width).length;
+		const offset = this.outputPrefix.length;
 		if (event.x < offset) return undefined;
 		return this.handleBlockMouse({ ...event, x: event.x - offset, width: event.width - offset });
-	}
-
-	private outputPrefix(width: number): string {
-		const branch = this.branch(width);
-		return branch ? " ".repeat(this.transcriptLayout?.bodyPadding ?? 0) + branch.output : "";
-	}
-
-	private branch(width: number): ToolBranch | undefined {
-		const layout = this.transcriptLayout;
-		return layout && toolBranch(layout.index, layout.groupSize, width - layout.bodyPadding);
 	}
 
 	private summarize(): ToolSummary {
@@ -379,8 +373,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	private rowState(): ToolRowState {
 		const result = this.result;
 		if (!result || this.isPartial) {
-			const status = this.executionStarted || result ? "running" : "waiting";
-			return { status, durationMs: undefined, error: undefined };
+			return { status: this.executionStarted || result ? "running" : "waiting" };
 		}
 		if (result.isError) {
 			const error = this.getTextOutput()
@@ -388,7 +381,7 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 				.find((line) => line.trim());
 			return { status: "failed", durationMs: result.durationMs, error };
 		}
-		return { status: "done", durationMs: result.durationMs, error: undefined };
+		return { status: "done", durationMs: result.durationMs };
 	}
 
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {

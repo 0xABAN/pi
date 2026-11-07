@@ -164,7 +164,6 @@ export const codemodeRenderers: Pick<
 		return component;
 	},
 	summarize(args) {
-		const code = str((args as { code?: unknown } | undefined)?.code);
-		return { label: "Codemode", icon: "⋈", target: code || undefined };
+		return { label: "Codemode", icon: "⋈", target: str((args as { code?: unknown } | undefined)?.code) ?? undefined };
 	},
 };

@@ -10,7 +10,7 @@ import { Container, Spacer, Text } from "@earendil-works/pi-tui";
 import { keyHint } from "../../../modes/interactive/components/keybinding-hints.ts";
 import { VisualLinePreview } from "../../../modes/interactive/components/visual-truncate.ts";
 import { theme } from "../../../modes/interactive/theme/theme.ts";
-import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
+import type { ToolRenderers, ToolRenderResultOptions } from "../../extensions/types.ts";
 import type { BashToolDetails } from "../bash.ts";
 import { getTextOutput, invalidArgText, startToolTimer, str, toolTimerText } from "../render-utils.ts";
 import { DEFAULT_MAX_BYTES, formatSize } from "../truncate.ts";
@@ -90,10 +90,7 @@ function rebuildBashResultRenderComponent(
 }
 
 /** Shell renderers are shared by bash and powershell, which differ only in the prompt and label they display. */
-export function createShellRenderers(
-	prompt: string,
-	label: string,
-): Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> {
+export function createShellRenderers(prompt: string, label: string): ToolRenderers {
 	return {
 		renderCall(args, _theme, context) {
 			startToolTimer(context);
@@ -109,8 +106,7 @@ export function createShellRenderers(
 			return component;
 		},
 		summarize(args) {
-			const command = str((args as { command?: string } | undefined)?.command);
-			return { label, icon: "↯", target: command || undefined };
+			return { label, icon: "↯", target: str((args as { command?: unknown } | undefined)?.command) ?? undefined };
 		},
 	};
 }

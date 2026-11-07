@@ -24,7 +24,7 @@ describe("built-in tool summaries", () => {
 			icon: "□",
 			target: `${join("~", "src", "app.ts")}:10-40`,
 		});
-		expect(summarize(renderers.read, {}).target).toBeUndefined();
+		expect(summarize(renderers.read, {}).target).toBe("");
 	});
 
 	it("edit and write show the path", () => {
@@ -51,7 +51,7 @@ describe("built-in tool summaries", () => {
 			icon: "↯",
 			target: "Get-ChildItem",
 		});
-		expect(summarize(renderers.bash, {}).target).toBeUndefined();
+		expect(summarize(renderers.bash, {}).target).toBe("");
 	});
 
 	it("search tools show the pattern and path", () => {
@@ -61,7 +61,7 @@ describe("built-in tool summaries", () => {
 			target: "TODO · src",
 		});
 		expect(summarize(renderers.find, { pattern: "*.ts" })).toEqual({ label: "Find", icon: "⊙", target: "*.ts" });
-		expect(summarize(renderers.grep, {}).target).toBeUndefined();
+		expect(summarize(renderers.grep, {}).target).toBe("");
 	});
 
 	it("ls shows the directory", () => {

@@ -14,7 +14,7 @@ import {
 	highlightCode,
 	type Theme,
 } from "../../../modes/interactive/theme/theme.ts";
-import type { ToolDefinition, ToolRenderResultOptions } from "../../extensions/types.ts";
+import type { ToolRenderers, ToolRenderResultOptions } from "../../extensions/types.ts";
 import { normalizeDisplayText, renderToolPath, replaceTabs, shortenPath, str } from "../render-utils.ts";
 
 type WriteHighlightCache = {
@@ -155,7 +155,7 @@ function formatWriteResult(
 	return `\n${theme.fg("error", output)}`;
 }
 
-export const writeRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
+export const writeRenderers: ToolRenderers = {
 	renderCall(args, theme, context) {
 		const renderArgs = args as { path?: string; file_path?: string; content?: string } | undefined;
 		const rawPath = str(renderArgs?.file_path ?? renderArgs?.path);
@@ -191,7 +191,6 @@ export const writeRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "rend
 	},
 	summarize(args) {
 		const renderArgs = args as { path?: string; file_path?: string } | undefined;
-		const path = str(renderArgs?.file_path ?? renderArgs?.path);
-		return { label: "Write", icon: "◇", target: path ? shortenPath(path) : undefined };
+		return { label: "Write", icon: "◇", target: shortenPath(renderArgs?.file_path ?? renderArgs?.path) };
 	},
 };

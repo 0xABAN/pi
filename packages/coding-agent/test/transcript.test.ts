@@ -259,17 +259,15 @@ describe("transcript tool rows", () => {
 		expect(clicks).toEqual([{ x: 2, y: 0 }]);
 	});
 
-	test("fits every line at any width", () => {
+	test("fits every line at real terminal widths", () => {
 		const calls = [readCall("src/a.ts"), failedEdit("src/b.ts"), readCall("src/c.ts")];
 		calls[0]?.setExpanded(true);
 		const container = transcript(calls);
 
-		for (let width = 1; width <= 40; width++) {
+		for (let width = 60; width <= 140; width++) {
 			const overflow = container.render(width).filter((text) => visibleWidth(text) > width);
 			expect(overflow, `width ${width}`).toEqual([]);
 		}
-		expect(plain(container.render(12)).join("\n")).not.toContain("├");
-		expect(plain(container.render(13)).join("\n")).toContain("├");
 	});
 
 	test("hides a collapsed call's output and names tools without a summary", () => {

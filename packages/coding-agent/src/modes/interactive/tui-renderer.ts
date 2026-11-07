@@ -26,7 +26,7 @@ export function createInteractiveTui(options: InteractiveTuiOptions): TuiMainScr
 }
 
 function horizontalInset(width: number): number {
-	return width < 16 ? 0 : Math.max(1, Math.floor(width * 0.02));
+	return Math.max(1, Math.floor(width * 0.02));
 }
 
 function createRenderer(options: InteractiveTuiOptions): TuiMainScreen | TuiAltScreen {

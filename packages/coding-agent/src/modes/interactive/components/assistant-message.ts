@@ -122,7 +122,6 @@ export class AssistantMessageComponent extends Container implements TranscriptMe
 		}
 		this.header.update({
 			visible: layout.showHeader && (this.contentContainer.children.length > 0 || this.hasToolCalls),
-			leadingBlank: true,
 			padding: layout.headerPadding,
 			timestamp: this.lastMessage?.timestamp,
 		});

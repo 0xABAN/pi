@@ -42,9 +42,8 @@ export function formatReadLineRange(offset: unknown, limit: unknown): string {
 	return `:${start}${end ? `-${end}` : ""}`;
 }
 
-export function formatSearchTarget(pattern: unknown, path: unknown): string | undefined {
-	const parts = [str(pattern), shortenPath(path)].filter(Boolean);
-	return parts.length > 0 ? parts.join(" · ") : undefined;
+export function formatSearchTarget(pattern: unknown, path: unknown): string {
+	return [str(pattern), shortenPath(path)].filter(Boolean).join(" · ");
 }
 
 export function replaceTabs(text: string): string {
@@ -108,7 +107,6 @@ export function formatToolCallWithArgs(title: string, args: unknown, theme: Them
 	return `${header} ${theme.fg("muted", formatArgumentPreview(args))}`;
 }
 
-/** Arguments as `key=value` pairs on one line, cut to {@link COLLAPSED_ARGS_CHARS}. */
 export function formatArgumentPreview(args: unknown): string {
 	const pairs = argumentEntries(args)
 		.map(([key, value]) => `${key}=${JSON.stringify(value) ?? String(value)}`)

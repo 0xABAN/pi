@@ -1,45 +1,31 @@
-import { type Component, Container, type TuiMouseEvent, truncateToWidth } from "@earendil-works/pi-tui";
+import { type Component, Container, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
-
-const NARROW_WIDTH = 80;
-const MIN_CONTENT_WIDTH = 3;
+import { NARROW_WIDTH } from "../transcript/transcript-container.ts";
 
 export class ExtensionDialog extends Container {
-	private frame = { width: -1, padding: 0, inner: 0, contentWidth: 0 };
-
 	override render(width: number): string[] {
-		const padding = Math.min(width < NARROW_WIDTH ? 1 : 3, Math.max(0, Math.floor((width - 2) / 2)));
-		const inner = Math.max(1, width - padding * 2);
-		const contentWidth = Math.max(MIN_CONTENT_WIDTH, inner);
-		this.frame = { width, padding, inner, contentWidth };
-
-		const gutter = " ".repeat(padding);
-		return super
-			.render(contentWidth)
-			.map((line) => gutter + (contentWidth > inner ? truncateToWidth(line, inner, "") : line));
+		const gutter = " ".repeat(dialogPadding(width));
+		return super.render(width - 2 * gutter.length).map((line) => gutter + line);
 	}
 
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
-		if (this.frame.width !== event.width) this.render(event.width);
-
-		const { padding, inner, contentWidth } = this.frame;
+		const padding = dialogPadding(event.width);
+		const contentWidth = event.width - 2 * padding;
 		const x = event.x - padding;
-		if (x < 0 || x >= inner) return undefined;
+		if (x < 0 || x >= contentWidth) return undefined;
 		return super.handleMouse({ ...event, x, width: contentWidth });
 	}
 }
 
 export class DialogBorder implements Component {
-	private readonly bottom: boolean;
+	private readonly corners: readonly [string, string];
 
 	constructor(position: "top" | "bottom") {
-		this.bottom = position === "bottom";
+		this.corners = position === "top" ? ["╭", "╮"] : ["╰", "╯"];
 	}
 
 	render(width: number): string[] {
-		if (width < 2) return [theme.fg("borderMuted", "─".repeat(width))];
-
-		const [left, right] = this.bottom ? ["╰", "╯"] : ["╭", "╮"];
+		const [left, right] = this.corners;
 		return [theme.fg("borderMuted", left + "─".repeat(width - 2) + right)];
 	}
 
@@ -50,4 +36,8 @@ export function dialogHeading(title: string): string {
 	const [first = "", ...rest] = title.split("\n");
 	const heading = theme.fg("accent", "◈ ") + theme.fg("muted", theme.bold(first));
 	return rest.length > 0 ? `${heading}\n${theme.fg("text", rest.join("\n"))}` : heading;
+}
+
+function dialogPadding(width: number): number {
+	return width < NARROW_WIDTH ? 1 : 3;
 }

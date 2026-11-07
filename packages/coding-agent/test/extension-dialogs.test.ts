@@ -1,26 +1,23 @@
-import { type TUI, type TuiMouseEvent, visibleWidth } from "@earendil-works/pi-tui";
+import type { TUI, TuiMouseEvent } from "@earendil-works/pi-tui";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { DialogBorder, ExtensionDialog } from "../src/modes/interactive/components/extension-dialog.ts";
-import { ExtensionInputComponent } from "../src/modes/interactive/components/extension-input.ts";
 import { ExtensionSelectorComponent } from "../src/modes/interactive/components/extension-selector.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
 import { stripAnsi } from "../src/utils/ansi.ts";
 
-function fakeTui(rows: number): TUI {
-	return { terminal: { rows }, requestRender: () => {} } as unknown as TUI;
-}
+const fakeTui = { requestRender: () => {} } as unknown as TUI;
 
 function plain(lines: string[]): string[] {
 	return lines.map((line) => stripAnsi(line).trimEnd());
 }
 
-function selector(title: string, options: string[], tui = fakeTui(40), timeout?: number) {
+function selector(title: string, options: string[], timeout?: number) {
 	return new ExtensionSelectorComponent(
 		title,
 		options,
 		() => {},
 		() => {},
-		{ tui, timeout },
+		{ tui: fakeTui, timeout },
 	);
 }
 
@@ -79,7 +76,7 @@ describe("extension dialogs", () => {
 
 	test("count down in the heading", () => {
 		vi.useFakeTimers();
-		const dialog = selector("Pick", ["a"], fakeTui(40), 3000);
+		const dialog = selector("Pick", ["a"], 3000);
 		expect(plain(dialog.render(60))[2]).toBe(" ◈ Pick (3s)");
 
 		vi.advanceTimersByTime(1000);
@@ -87,47 +84,17 @@ describe("extension dialogs", () => {
 		dialog.dispose();
 	});
 
-	test("show a window of a long list around the selection", () => {
+	test("show ten options of a long list around the selection", () => {
 		const options = Array.from({ length: 30 }, (_, i) => `option ${i}`);
-		const dialog = selector("Pick", options, fakeTui(12));
+		const dialog = selector("Pick", options);
 		for (let i = 0; i < 20; i++) dialog.handleInput("j");
 
-		expect(plain(dialog.render(60)).slice(4, 10)).toEqual([
-			" ◇ option 16",
-			" ◇ option 17",
-			" ◇ option 18",
-			" ◇ option 19",
-			" ◆ option 20",
-			" (21/30)",
-		]);
+		const lines = plain(dialog.render(60));
+		expect(lines[4]).toBe(" ◇ option 11");
+		expect(lines.slice(12, 15)).toEqual([" ◇ option 19", " ◆ option 20", " (21/30)"]);
 
-		for (let i = 0; i < 6; i++) dialog.handleInput("k");
-		expect(plain(dialog.render(60)).slice(4, 6)).toEqual([" ◆ option 14", " ◇ option 15"]);
-	});
-
-	test("show more options when the window grows", () => {
-		const tui = fakeTui(12);
-		const options = Array.from({ length: 30 }, (_, i) => `option ${i}`);
-		const dialog = selector("Pick", options, tui);
-		expect(plain(dialog.render(60)).filter((line) => line.includes("option"))).toHaveLength(5);
-
-		(tui.terminal as { rows: number }).rows = 40;
-		expect(plain(dialog.render(60)).filter((line) => line.includes("option"))).toHaveLength(12);
-	});
-
-	test("fit every line on tiny screens", () => {
-		const input = new ExtensionInputComponent(
-			"Name",
-			undefined,
-			() => {},
-			() => {},
-			{ tui: fakeTui(40), initialValue: "abcdefghij" },
-		);
-		input.focused = true;
-
-		for (let width = 1; width <= 12; width++) {
-			expect(input.render(width).filter((line) => visibleWidth(line) > width)).toEqual([]);
-		}
+		for (let i = 0; i < 10; i++) dialog.handleInput("k");
+		expect(plain(dialog.render(60)).slice(4, 6)).toEqual([" ◆ option 10", " ◇ option 11"]);
 	});
 
 	test("pass clicks past the gutter to the content", () => {

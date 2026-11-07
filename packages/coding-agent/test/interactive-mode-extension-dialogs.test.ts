@@ -8,7 +8,7 @@ type DialogContext = {
 	editorContainer: Container;
 	editor: Component & { getText(): string; setText(text: string): void };
 	focused: Component | undefined;
-	ui: { setFocus: (component: Component) => void; requestRender: () => void; terminal: { rows: number } };
+	ui: { setFocus: (component: Component) => void; requestRender: () => void };
 	programStatus: { setBlocked: ReturnType<typeof vi.fn> };
 	disposeActiveSelector: () => void;
 	toggleToolOutputExpansion: () => void;
@@ -44,7 +44,6 @@ function createContext(): DialogContext & DialogMethods {
 				context.focused = component;
 			},
 			requestRender: vi.fn(),
-			terminal: { rows: 24 },
 		},
 		programStatus: { setBlocked: vi.fn() },
 		disposeActiveSelector: vi.fn(),

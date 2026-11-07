@@ -12,8 +12,8 @@ export type ToolRowStatus = "waiting" | "running" | "done" | "failed";
 
 export interface ToolRowState {
 	readonly status: ToolRowStatus;
-	readonly durationMs: number | undefined;
-	readonly error: string | undefined;
+	readonly durationMs?: number;
+	readonly error?: string;
 }
 
 export interface ToolBranch {
@@ -26,15 +26,13 @@ const INNER_BRANCH: ToolBranch = { row: "├─ ", continuation: "│  ", output
 const LAST_BRANCH: ToolBranch = { row: "╰─ ", continuation: "   ", output: "  " };
 
 const LABEL_WIDTH = 6;
-const ALIGNED_LABEL_MIN_WIDTH = 60;
-const TREE_MIN_WIDTH = 12;
 
 export function genericToolSummary(toolName: string, args: unknown): ToolSummary {
 	return { label: toolName, icon: "⌇", target: formatArgumentPreview(args) };
 }
 
-export function toolBranch(index: number, groupSize: number, width: number): ToolBranch | undefined {
-	if (groupSize < 2 || width < TREE_MIN_WIDTH) return undefined;
+export function toolBranch(index: number, groupSize: number): ToolBranch | undefined {
+	if (groupSize < 2) return undefined;
 	return index === groupSize - 1 ? LAST_BRANCH : INNER_BRANCH;
 }
 
@@ -45,11 +43,9 @@ export function renderToolRow(summary: ToolSummary, state: ToolRowState, width: 
 		);
 	}
 
-	const label = plain(summary.label);
-	const shownLabel = width < ALIGNED_LABEL_MIN_WIDTH ? label : label.padEnd(LABEL_WIDTH);
 	const parts = [statusGlyph(state.status)];
 	if (summary.icon) parts.push(theme.fg("accent", plain(summary.icon)));
-	parts.push(theme.bold(theme.fg("muted", shownLabel)));
+	parts.push(theme.bold(theme.fg("muted", plain(summary.label).padEnd(LABEL_WIDTH))));
 	const target = plain(summary.target ?? "");
 	if (target) parts.push(theme.fg("text", target));
 	const title = parts.join(" ");
@@ -78,10 +74,7 @@ function titleWithDuration(title: string, durationMs: number | undefined, width:
 	if (durationMs === undefined) return truncateToWidth(title, width, "…");
 
 	const duration = formatToolDuration(durationMs);
-	const room = width - visibleWidth(duration) - 1;
-	if (room < 1) return truncateToWidth(title, width, "…");
-
-	const shown = truncateToWidth(title, room, "…");
+	const shown = truncateToWidth(title, width - visibleWidth(duration) - 1, "…");
 	const gap = width - visibleWidth(shown) - visibleWidth(duration);
 	return shown + " ".repeat(gap) + theme.fg("muted", duration);
 }

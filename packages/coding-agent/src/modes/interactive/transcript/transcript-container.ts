@@ -25,7 +25,7 @@ export interface TranscriptTool extends Component {
 
 type TranscriptRole = (TranscriptMessage | TranscriptTool)["transcriptRole"];
 
-const NARROW_WIDTH = 80;
+export const NARROW_WIDTH = 80;
 
 export class TranscriptContainer extends Container {
 	private readonly getPadding: () => number;
@@ -36,11 +36,8 @@ export class TranscriptContainer extends Container {
 	}
 
 	override render(width: number): string[] {
-		const headerPadding = Math.min(Math.max(0, this.getPadding()), Math.max(0, width - 1));
-		const bodyPadding = Math.min(
-			width < NARROW_WIDTH ? 1 : headerPadding + 2,
-			Math.max(0, Math.floor((width - 2) / 2)),
-		);
+		const headerPadding = this.getPadding();
+		const bodyPadding = width < NARROW_WIDTH ? 1 : headerPadding + 2;
 
 		let speaker: "user" | "pi" | undefined;
 		let tools: TranscriptTool[] = [];

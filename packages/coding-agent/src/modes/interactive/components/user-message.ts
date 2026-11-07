@@ -56,7 +56,6 @@ export class UserMessageComponent extends Container implements TranscriptMessage
 		this.transcriptLayout = layout;
 		this.header.update({
 			visible: layout.showHeader,
-			leadingBlank: false,
 			padding: layout.headerPadding,
 			timestamp: this.sentAt,
 		});

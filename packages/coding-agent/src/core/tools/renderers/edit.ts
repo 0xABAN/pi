@@ -9,7 +9,7 @@
 import { Box, Container, Spacer, Text } from "@earendil-works/pi-tui";
 import { renderDiff } from "../../../modes/interactive/components/diff.ts";
 import type { Theme } from "../../../modes/interactive/theme/theme.ts";
-import type { ToolDefinition } from "../../extensions/types.ts";
+import type { ToolRenderers } from "../../extensions/types.ts";
 import type { EditToolDetails } from "../edit.ts";
 import { computeEditsDiff, type Edit, type EditDiffError, type EditDiffResult } from "../edit-diff.ts";
 import { renderToolPath, shortenPath, str } from "../render-utils.ts";
@@ -170,7 +170,7 @@ function setEditPreview(
 	return changed;
 }
 
-export const editRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "summarize"> = {
+export const editRenderers: ToolRenderers = {
 	renderCall(args, theme, context) {
 		const component = getEditCallRenderComponent(context.state, context.lastComponent);
 		const previewInput = getRenderablePreviewInput(args as RenderableEditArgs | undefined);
@@ -251,7 +251,6 @@ export const editRenderers: Pick<ToolDefinition<any, any>, "renderCall" | "rende
 	},
 	summarize(rawArgs) {
 		const args = rawArgs as RenderableEditArgs | undefined;
-		const path = str(args?.file_path ?? args?.path);
-		return { label: "Edit", icon: "◈", target: path ? shortenPath(path) : undefined };
+		return { label: "Edit", icon: "◈", target: shortenPath(args?.file_path ?? args?.path) };
 	},
 };

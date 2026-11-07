@@ -1,16 +1,17 @@
-import { type Component, truncateToWidth } from "@earendil-works/pi-tui";
+import type { Component } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
 
 export interface SpeakerHeaderState {
 	readonly visible: boolean;
-	readonly leadingBlank: boolean;
 	readonly padding: number;
 	readonly timestamp: number | undefined;
 }
 
+const TIME_FORMAT = new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" });
+
 export class SpeakerHeader implements Component {
 	private readonly speaker: "You" | "Pi";
-	private state: SpeakerHeaderState = { visible: false, leadingBlank: false, padding: 0, timestamp: undefined };
+	private state: SpeakerHeaderState = { visible: false, padding: 0, timestamp: undefined };
 
 	constructor(speaker: "You" | "Pi") {
 		this.speaker = speaker;
@@ -24,18 +25,17 @@ export class SpeakerHeader implements Component {
 		this.state = state;
 	}
 
-	render(width: number): string[] {
+	render(): string[] {
 		if (!this.state.visible) return [];
 
 		const glyph = this.speaker === "You" ? theme.fg("accent", "◆") : theme.fg("warning", "●");
 		let header = `${glyph} ${theme.bold(theme.fg("text", this.speaker))}`;
 		if (this.state.timestamp !== undefined) {
-			const time = new Date(this.state.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-			header += theme.fg("dim", ` · ${time}`);
+			header += theme.fg("dim", ` · ${TIME_FORMAT.format(this.state.timestamp)}`);
 		}
 
-		const line = truncateToWidth(" ".repeat(this.state.padding) + header, width);
-		return this.state.leadingBlank ? ["", line] : [line];
+		const line = " ".repeat(this.state.padding) + header;
+		return this.speaker === "Pi" ? ["", line] : [line];
 	}
 
 	invalidate(): void {}
@@ -49,8 +49,7 @@ export class MessageSeparator implements Component {
 	}
 
 	render(width: number): string[] {
-		const length = Math.max(1, width - 2 * this.padding);
-		return [" ".repeat(this.padding) + theme.fg("toolOutput", "─".repeat(length))];
+		return [" ".repeat(this.padding) + theme.fg("toolOutput", "─".repeat(width - 2 * this.padding))];
 	}
 
 	invalidate(): void {}

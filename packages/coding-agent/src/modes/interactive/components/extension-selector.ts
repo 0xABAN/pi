@@ -17,16 +17,13 @@ export interface ExtensionSelectorOptions {
 	description?: string;
 }
 
-const MIN_VISIBLE_OPTIONS = 5;
-const VISIBLE_OPTIONS_SHARE = 0.3;
+const MAX_VISIBLE_OPTIONS = 10;
 
 export class ExtensionSelectorComponent extends ExtensionDialog {
 	private options: string[];
 	private selectedIndex = 0;
 	private scrollOffset = 0;
-	private shownCount = 0;
 	private listContainer: Container;
-	private tui: TUI | undefined;
 	private onSelectCallback: (option: string) => void;
 	private onCancelCallback: () => void;
 	private titleText: ThemedText;
@@ -45,7 +42,6 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 		super();
 
 		this.options = options;
-		this.tui = opts?.tui;
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
 		this.onToggleToolsExpanded = opts?.onToggleToolsExpanded;
@@ -97,39 +93,18 @@ export class ExtensionSelectorComponent extends ExtensionDialog {
 		this.updateList();
 	}
 
-	override render(width: number): string[] {
-		if (this.visibleCount() !== this.shownCount) this.updateList();
-		return super.render(width);
-	}
-
-	private visibleCount(): number {
-		const rows = this.tui?.terminal.rows;
-		const count =
-			rows === undefined
-				? this.options.length
-				: Math.max(MIN_VISIBLE_OPTIONS, Math.floor(rows * VISIBLE_OPTIONS_SHARE));
-		return Math.min(count, this.options.length);
-	}
-
 	private updateList(): void {
-		const count = this.visibleCount();
-		const lowest = Math.max(0, this.selectedIndex - count + 1);
-		this.scrollOffset = Math.min(
-			Math.max(this.scrollOffset, lowest),
-			this.selectedIndex,
-			this.options.length - count,
-		);
-		this.shownCount = count;
+		const count = Math.min(MAX_VISIBLE_OPTIONS, this.options.length);
+		this.scrollOffset = Math.min(Math.max(this.scrollOffset, this.selectedIndex - count + 1), this.selectedIndex);
 
 		this.listContainer.clear();
-		for (let i = this.scrollOffset; i < this.scrollOffset + count; i++) {
-			const option = this.options[i] ?? "";
+		this.options.slice(this.scrollOffset, this.scrollOffset + count).forEach((option, offset) => {
 			const text =
-				i === this.selectedIndex
+				this.scrollOffset + offset === this.selectedIndex
 					? () => theme.fg("accent", "◆ ") + theme.fg("text", theme.bold(option))
 					: () => theme.fg("muted", "◇ ") + theme.fg("text", option);
 			this.listContainer.addChild(new ThemedText(text, 0, 0));
-		}
+		});
 
 		if (count < this.options.length) {
 			const position = `(${this.selectedIndex + 1}/${this.options.length})`;

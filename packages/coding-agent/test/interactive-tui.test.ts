@@ -82,7 +82,6 @@ describe("createInteractiveTui", () => {
 	it("insets both renderers by 2% of the terminal width", async () => {
 		for (const tuiMode of ["regular", "fullscreen"] as const) {
 			for (const [columns, inset] of [
-				[15, 0],
 				[80, 1],
 				[100, 2],
 				[200, 4],

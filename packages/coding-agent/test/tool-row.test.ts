@@ -10,7 +10,7 @@ import {
 import { stripAnsi } from "../src/utils/ansi.ts";
 
 const read = { label: "Read", icon: "□", target: "src/app.ts" };
-const done: ToolRowState = { status: "done", durationMs: 120, error: undefined };
+const done: ToolRowState = { status: "done", durationMs: 120 };
 
 function plain(lines: string[]): string[] {
 	return lines.map(stripAnsi);
@@ -24,8 +24,7 @@ describe("renderToolRow", () => {
 	});
 
 	test("shows the call's status and no duration before it finishes", () => {
-		const row = (status: ToolRowState["status"]) =>
-			plain(renderToolRow(read, { status, durationMs: undefined, error: undefined }, 60))[0];
+		const row = (status: ToolRowState["status"]) => plain(renderToolRow(read, { status }, 60))[0];
 
 		expect(row("waiting")).toBe("○ □ Read   src/app.ts");
 		expect(row("running")).toBe("◌ □ Read   src/app.ts");
@@ -40,36 +39,32 @@ describe("renderToolRow", () => {
 		]);
 	});
 
-	test("shortens the target before dropping the duration", () => {
+	test("shortens the target and keeps the duration", () => {
 		const long = { ...read, target: "src/a/very/deeply/nested/module/file.ts" };
 		const [narrow] = plain(renderToolRow(long, done, 24));
 
 		expect(visibleWidth(narrow)).toBe(24);
-		expect(narrow).toBe("✓ □ Read src/a/ver… 0.1s");
-		expect(plain(renderToolRow(long, done, 4))).toEqual(["✓ □…"]);
+		expect(narrow).toBe("✓ □ Read   src/a/v… 0.1s");
 	});
 
 	test("keeps tool text on one line without terminal sequences", () => {
 		const summary = { label: "Run\n", icon: "↯", target: "echo a\n\x1b[31mb\x1b[0m\tc" };
 
-		expect(plain(renderToolRow(summary, { ...done, durationMs: undefined }, 40))).toEqual(["✓ ↯ Run echo a b c"]);
+		expect(plain(renderToolRow(summary, { status: "done" }, 40))).toEqual(["✓ ↯ Run    echo a b c"]);
 	});
 
 	test("draws an inner branch beside the row and its error line", () => {
-		const failed: ToolRowState = { status: "failed", durationMs: undefined, error: "denied" };
+		const failed: ToolRowState = { status: "failed", error: "denied" };
 
-		expect(plain(renderToolRow(read, failed, 30, toolBranch(0, 3, 30)))).toEqual([
-			"├─ × □ Read src/app.ts",
+		expect(plain(renderToolRow(read, failed, 30, toolBranch(0, 3)))).toEqual([
+			"├─ × □ Read   src/app.ts",
 			"│    denied",
 		]);
 	});
 
-	test("ends the tree at the last call and leaves lone or cramped calls without one", () => {
-		expect(plain(renderToolRow(read, done, 30, toolBranch(2, 3, 30)))).toEqual([
-			`╰─ ✓ □ Read src/app.ts${" ".repeat(4)}0.1s`,
-		]);
-		expect(toolBranch(0, 1, 30)).toBeUndefined();
-		expect(toolBranch(0, 3, 11)).toBeUndefined();
+	test("ends the tree at the last call and leaves lone calls without one", () => {
+		expect(plain(renderToolRow(read, done, 30, toolBranch(2, 3)))).toEqual(["╰─ ✓ □ Read   src/app.ts  0.1s"]);
+		expect(toolBranch(0, 1)).toBeUndefined();
 	});
 
 	test("describes tools without a summary by name and arguments", () => {
