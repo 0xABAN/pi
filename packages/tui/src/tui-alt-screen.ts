@@ -408,9 +408,10 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 			this.terminal.write(`${BEGIN_SYNCHRONIZED_OUTPUT}${EXIT_ALT_SCREEN}\x1b[?25h${END_SYNCHRONIZED_OUTPUT}`);
 		} else {
 			const width = Math.max(1, this.terminal.columns);
-			const documentLines = this.resolveFakeCursors(this.render(width)).map((line) =>
+			const contentLines = this.resolveFakeCursors(this.render(this.getContentWidth(width))).map((line) =>
 				line.replace(OSC133_ZONE_PREFIX, ""),
 			);
+			const documentLines = this.insetLines(contentLines, width);
 			this.lastDocument = this.applyLineResets(documentLines.map((line) => line.replaceAll(CURSOR_MARKER, ""))).map(
 				(line) => (isImageLine(line) || visibleWidth(line) <= width ? line : sliceByColumn(line, 0, width, true)),
 			);
@@ -1677,7 +1678,8 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 	}
 
 	private compositeFlashes(screen: string[], width: number, height: number): string[] {
-		const flashLines = this.flashes.render(width).slice(-height);
+		const inset = this.getHorizontalInset(width);
+		const flashLines = this.flashes.render(this.getContentWidth(width)).slice(-height);
 		if (flashLines.length === 0) return screen;
 		const result = [...screen];
 		while (result.length < height) result.push("");
@@ -1685,7 +1687,7 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 			const line = flashLines[row]!;
 			const flashWidth = visibleWidth(line);
 			if (flashWidth === 0) continue;
-			result[row] = compositeTuiLine(result[row] ?? "", line, width - flashWidth, flashWidth, width);
+			result[row] = compositeTuiLine(result[row] ?? "", line, width - inset - flashWidth, flashWidth, width);
 		}
 		return result;
 	}
@@ -1695,9 +1697,10 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
 		const width = Math.max(1, this.terminal.columns);
 		const height = Math.max(1, this.terminal.rows);
 		const root = this.layoutRoot ?? this.implicitScrollView;
-		let nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender());
+		const inset = this.getHorizontalInset(width);
+		let nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender(), inset);
 		if (this.refreshSearch(nextLayout)) {
-			nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender());
+			nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender(), inset);
 		}
 		// Resolve fake cursors before highlighting and compositing, which only track SGR codes
 		let screen = this.resolveFakeCursors(nextLayout.lines.map((line) => line.replace(OSC133_ZONE_PREFIX, "")));

@@ -256,6 +256,7 @@ function parseSizeValue(value: SizeValue | undefined, referenceSize: number): nu
 /**
  * Options for overlay positioning and sizing.
  * Values can be absolute numbers or percentage strings (e.g., "50%").
+ * Horizontal values are relative to the content area inside the screen's horizontal inset.
  */
 export interface OverlayOptions {
 	// === Sizing ===
@@ -524,6 +525,7 @@ export abstract class TuiBase extends Container implements TUI {
 	private static readonly MIN_RENDER_INTERVAL_MS = 16;
 	private showHardwareCursor = false;
 	private clearOnShrink = false;
+	private horizontalInset: (width: number) => number = () => 0;
 	protected fullRedrawCount = 0;
 	protected stopped = false;
 	/**
@@ -556,6 +558,19 @@ export abstract class TuiBase extends Container implements TUI {
 	}
 
 	protected abstract doRender(): void;
+
+	protected getHorizontalInset(width: number): number {
+		return this.horizontalInset(width);
+	}
+
+	protected getContentWidth(width: number): number {
+		return width - 2 * this.getHorizontalInset(width);
+	}
+
+	protected insetLines(lines: string[], width: number): string[] {
+		const padding = " ".repeat(this.getHorizontalInset(width));
+		return lines.map((line) => (line ? padding + line : line));
+	}
 
 	protected resetRenderState(): void {}
 
@@ -618,6 +633,10 @@ export abstract class TuiBase extends Container implements TUI {
 	 */
 	setClearOnShrink(enabled: boolean): void {
 		this.clearOnShrink = enabled;
+	}
+
+	setHorizontalInset(inset: (width: number) => number): void {
+		this.horizontalInset = inset;
 	}
 
 	getFocusedComponent(): Component | null {
@@ -931,7 +950,7 @@ export abstract class TuiBase extends Container implements TUI {
 	private isOverlayVisible(entry: OverlayStackEntry): boolean {
 		if (entry.hidden) return false;
 		if (entry.options?.visible) {
-			return entry.options.visible(this.terminal.columns, this.terminal.rows);
+			return entry.options.visible(this.getContentWidth(this.terminal.columns), this.terminal.rows);
 		}
 		return true;
 	}
@@ -1251,6 +1270,8 @@ export abstract class TuiBase extends Container implements TUI {
 		termHeight: number,
 	): { width: number; row: number; col: number; maxHeight: number | undefined } {
 		const opt = options ?? {};
+		const inset = this.getHorizontalInset(termWidth);
+		const contentWidth = this.getContentWidth(termWidth);
 
 		// Parse margin (clamp to non-negative)
 		const margin =
@@ -1263,11 +1284,11 @@ export abstract class TuiBase extends Container implements TUI {
 		const marginLeft = Math.max(0, margin.left ?? 0);
 
 		// Available space after margins
-		const availWidth = Math.max(1, termWidth - marginLeft - marginRight);
+		const availWidth = Math.max(1, contentWidth - marginLeft - marginRight);
 		const availHeight = Math.max(1, termHeight - marginTop - marginBottom);
 
 		// === Resolve width ===
-		let width = parseSizeValue(opt.width, termWidth) ?? Math.min(80, availWidth);
+		let width = parseSizeValue(opt.width, contentWidth) ?? Math.min(80, availWidth);
 		// Apply minWidth
 		if (opt.minWidth !== undefined) {
 			width = Math.max(width, opt.minWidth);
@@ -1339,9 +1360,9 @@ export abstract class TuiBase extends Container implements TUI {
 
 		// Clamp to terminal bounds (respecting margins)
 		row = Math.max(marginTop, Math.min(row, termHeight - marginBottom - effectiveHeight));
-		col = Math.max(marginLeft, Math.min(col, termWidth - marginRight - width));
+		col = Math.max(marginLeft, Math.min(col, contentWidth - marginRight - width));
 
-		return { width, row, col, maxHeight };
+		return { width, row, col: col + inset, maxHeight };
 	}
 
 	private resolveAnchorRow(anchor: OverlayAnchor, height: number, availHeight: number, marginTop: number): number {

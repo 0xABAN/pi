@@ -79,6 +79,25 @@ describe("createInteractiveTui", () => {
 		altTui.stop();
 	});
 
+	it("insets both renderers by 2% of the terminal width", async () => {
+		for (const tuiMode of ["regular", "fullscreen"] as const) {
+			for (const [columns, inset] of [
+				[15, 0],
+				[80, 1],
+				[100, 2],
+				[200, 4],
+			] as const) {
+				const terminal = new VirtualTerminal(columns, 4);
+				const tui = createInteractiveTui({ tuiMode, showHardwareCursor: false, logDirectory: "/tmp", terminal });
+				tui.addChild(new Text("content", 0, 0));
+				tui.start();
+				await terminal.waitForRender();
+				expect(terminal.getViewport().map((line) => line.trimEnd())).toContain(`${" ".repeat(inset)}content`);
+				tui.stop();
+			}
+		}
+	});
+
 	it("shows the configured jump-to-bottom shortcut while scrolled up", async () => {
 		initTheme("dark");
 		const previousKeybindings = getKeybindings();
@@ -99,7 +118,7 @@ describe("createInteractiveTui", () => {
 		ui.start();
 		try {
 			await terminal.waitForRender();
-			terminal.sendInput("\x1b[<64;1;1M");
+			terminal.sendInput("\x1b[<64;2;1M");
 			await terminal.waitForRender();
 			expect(terminal.getViewport()[3]).toContain("↓ Jump to latest message · Ctrl+J");
 		} finally {
@@ -246,9 +265,9 @@ describe("InteractiveMode copy confirmation", () => {
 		ui.start();
 		try {
 			await terminal.waitForRender();
-			terminal.sendInput("\x1b[<0;1;1M");
-			terminal.sendInput("\x1b[<32;4;2M");
-			terminal.sendInput("\x1b[<0;4;2m");
+			terminal.sendInput("\x1b[<0;2;1M");
+			terminal.sendInput("\x1b[<32;5;2M");
+			terminal.sendInput("\x1b[<0;5;2m");
 			await terminal.waitForRender();
 			clipboardMocks.copyToClipboard.mockClear();
 
@@ -288,9 +307,9 @@ describe("InteractiveMode copy confirmation", () => {
 		ui.start();
 		try {
 			await terminal.waitForRender();
-			terminal.sendInput("\x1b[<0;1;1M");
-			terminal.sendInput("\x1b[<32;4;2M");
-			terminal.sendInput("\x1b[<0;4;2m");
+			terminal.sendInput("\x1b[<0;2;1M");
+			terminal.sendInput("\x1b[<32;5;2M");
+			terminal.sendInput("\x1b[<0;5;2m");
 			await terminal.waitForRender();
 			clipboardMocks.copyToClipboard.mockClear();
 
@@ -388,9 +407,9 @@ describe("InteractiveMode transcript rebuild", () => {
 		ui.start();
 		try {
 			await terminal.waitForRender();
-			terminal.sendInput("\x1b[<0;1;1M");
-			terminal.sendInput("\x1b[<32;4;2M");
-			terminal.sendInput("\x1b[<0;4;2m");
+			terminal.sendInput("\x1b[<0;2;1M");
+			terminal.sendInput("\x1b[<32;5;2M");
+			terminal.sendInput("\x1b[<0;5;2m");
 			await terminal.waitForRender();
 			expect(ui.hasActiveSelection()).toBe(true);
 

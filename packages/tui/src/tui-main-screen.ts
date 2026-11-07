@@ -266,7 +266,8 @@ export class TuiMainScreen extends TuiBase implements TUI {
 		// Render all components to get new lines
 		// Resolve fake cursors before compositing so overlays and line slicing see plain SGR codes
 		// Drop OSC 133 markers: the terminal reads 133;A as a new shell prompt, which ends program status (OSC 7501)
-		let newLines = this.resolveFakeCursors(this.render(width).map((line) => line.replace(OSC133_ZONE_PREFIX, "")));
+		const contentLines = this.render(this.getContentWidth(width)).map((line) => line.replace(OSC133_ZONE_PREFIX, ""));
+		let newLines = this.resolveFakeCursors(this.insetLines(contentLines, width));
 
 		// Composite overlays into the rendered lines (before differential compare)
 		if (this.hasOverlayEntries) {

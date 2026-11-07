@@ -61,6 +61,8 @@ tui.start();
 - `TuiMainScreen` renders into the main terminal buffer and preserves terminal scrollback.
 - `TuiAltScreen` renders a fixed-height viewport in the alternate terminal buffer with application-owned scrolling. When stopped, it restores the main buffer and prints the complete final document.
 
+Both renderers can keep blank columns at each side of the screen. Call `setHorizontalInset((width) => columns)` before `start()` with the number of columns for a terminal width. Components then render at the width between the insets, and overlay sizes and positions, mouse coordinates, and selections are measured inside it. The default is no inset.
+
 ```typescript
 import { type TUI, TuiAltScreen, TuiMainScreen } from "@earendil-works/pi-tui";
 

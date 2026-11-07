@@ -327,7 +327,9 @@ function paintScrollbar(box: LayoutBox, screen: string[], totalWidth: number): v
 	}
 }
 
-function paintBox(box: LayoutBox, screen: string[], totalWidth: number): void {
+function paintBox(box: LayoutBox, screen: string[], totalWidth: number, inset: number): void {
+	const padding = " ".repeat(inset);
+	const spansContent = box.rect.x === inset && box.rect.width >= totalWidth - 2 * inset;
 	if (box.lines) {
 		const offset = box.lineOffset ?? 0;
 		const firstRow = Math.max(box.rect.y, box.clip.y, 0);
@@ -342,19 +344,19 @@ function paintBox(box: LayoutBox, screen: string[], totalWidth: number): void {
 				const visibleRows = Math.min(imageMetadata.rows, clipBottom - row);
 				if (visibleRows < imageMetadata.rows) line = cropKittyImageLine(line, 0, visibleRows);
 			}
-			// Fast path: a full-width box painting onto an untouched row can use the
-			// source line reference directly. Compositing here would rebuild the row
-			// string through ANSI/grapheme segmentation every frame; padding is
-			// unnecessary because rows are written with erase-line and the final
-			// width clamp still truncates over-wide lines.
-			if (box.rect.x === 0 && box.rect.width >= totalWidth && (isImageLine(line) || !screen[row])) {
-				screen[row] = line;
+			// Fast path: a box spanning the content width painting onto an untouched row
+			// can use the source line behind the inset directly. Compositing here would
+			// rebuild the row string through ANSI/grapheme segmentation every frame;
+			// right padding is unnecessary because rows are written with erase-line and
+			// the final width clamp still truncates over-wide lines.
+			if (spansContent && (isImageLine(line) || !screen[row])) {
+				screen[row] = padding + line;
 			} else {
 				screen[row] = compositeTuiLine(screen[row] ?? "", line, box.rect.x, box.rect.width, totalWidth);
 			}
 		}
 	}
-	for (const child of box.children) paintBox(child, screen, totalWidth);
+	for (const child of box.children) paintBox(child, screen, totalWidth, inset);
 
 	if (box.scrollView && box.scrollContentLines && box.scrollView.scrollTop > 0 && box.rect.height > 0) {
 		// Find the nearest image line above the viewport. Placeholder rows below an
@@ -371,7 +373,7 @@ function paintBox(box: LayoutBox, screen: string[], totalWidth: number): void {
 			if (hiddenRows < metadata.rows) {
 				const visibleRows = Math.min(box.rect.height, metadata.rows - hiddenRows);
 				const cropped = cropKittyImageLine(imageLine, hiddenRows, visibleRows);
-				if (box.rect.x === 0 && box.rect.width >= totalWidth) screen[box.rect.y] = cropped;
+				if (spansContent) screen[box.rect.y] = padding + cropped;
 			}
 			break;
 		}
@@ -385,23 +387,20 @@ export function renderLayoutFrame(
 	width: number,
 	height: number,
 	requestRender: () => void,
+	inset = 0,
 ): LayoutFrame {
 	const safeWidth = Math.max(1, Math.floor(width));
 	const safeHeight = Math.max(1, Math.floor(height));
+	const content: LayoutRect = { x: inset, y: 0, width: safeWidth - 2 * inset, height: safeHeight };
 	const context: LayoutContext = {
-		viewport: { width: safeWidth, height: safeHeight },
+		viewport: { width: content.width, height: safeHeight },
 		renderCache: new Map(),
 		requestRender,
 		primaryScrollView: undefined,
 	};
-	const rootBox = layoutComponent(context, root, 0, 0, safeWidth, safeHeight, {
-		x: 0,
-		y: 0,
-		width: safeWidth,
-		height: safeHeight,
-	});
+	const rootBox = layoutComponent(context, root, content.x, 0, content.width, safeHeight, content);
 	const lines = Array.from({ length: safeHeight }, () => "");
-	paintBox(rootBox, lines, safeWidth);
+	paintBox(rootBox, lines, safeWidth, inset);
 	return {
 		root: rootBox,
 		width: safeWidth,
