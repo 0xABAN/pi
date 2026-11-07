@@ -692,7 +692,7 @@ export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = un
 		context: ToolRenderContext<TState, Static<TParams>>,
 	) => Component;
 
-	summarize?(args: Static<TParams>): ToolSummary;
+	summarize?(args: Static<TParams>, result?: AgentToolResult<TDetails>): ToolSummary;
 }
 
 type AnyToolDefinition = ToolDefinition<any, any, any>;

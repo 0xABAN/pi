@@ -276,6 +276,17 @@ describe("transcript tool rows", () => {
 		expect(lines).toEqual(["", line('   ✓ ⌇ deploy env="prod"')]);
 	});
 
+	test("passes the call's result to its summary", () => {
+		const call = toolCall(
+			"peek",
+			{},
+			{ summarize: (_args, result) => ({ label: "Peek", target: result?.details.name }) },
+		);
+		call.updateResult({ content: [], details: { name: "notes" }, isError: false });
+
+		expect(plain(transcript([call]).render(100))[1]).toBe("   ✓ Peek   notes");
+	});
+
 	test("summarizes a call again only when it changes", () => {
 		const summarize = vi.fn(() => ({ label: "Peek" }));
 		const call = toolCall("peek", {}, { summarize });

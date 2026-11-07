@@ -367,7 +367,8 @@ export class ToolExecutionComponent extends Container implements TranscriptTool 
 	}
 
 	private summarize(): ToolSummary {
-		return this.toolDefinition?.summarize?.(this.args) ?? genericToolSummary(this.toolName, this.args);
+		const result = this.result && { content: this.result.content as any, details: this.result.details };
+		return this.toolDefinition?.summarize?.(this.args, result) ?? genericToolSummary(this.toolName, this.args);
 	}
 
 	private rowState(): ToolRowState {
