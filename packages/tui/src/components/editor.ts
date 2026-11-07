@@ -519,12 +519,16 @@ export class Editor implements Component, Focusable {
 
 	protected renderTopBorder(width: number, hiddenLineCount: number): string {
 		const border = hiddenLineCount > 0 ? createScrollBorder("↑", hiddenLineCount, width) : "─".repeat(width);
-		return this.borderColor(border);
+		return this.borderStyle(border);
 	}
 
 	protected renderBottomBorder(width: number, hiddenLineCount: number): string {
 		const border = hiddenLineCount > 0 ? createScrollBorder("↓", hiddenLineCount, width) : "─".repeat(width);
-		return this.borderColor(border);
+		return this.borderStyle(border);
+	}
+
+	protected borderStyle(text: string): string {
+		return this.borderColor(text);
 	}
 
 	render(width: number): string[] {

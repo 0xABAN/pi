@@ -9,10 +9,14 @@ class TallEditor extends Editor {
 	protected override maxVisibleLines(): number {
 		return 8;
 	}
+
+	protected override borderStyle(text: string): string {
+		return `<${text}>`;
+	}
 }
 
 describe("Editor frame hooks", () => {
-	it("lets subclasses set the visible line limit and read the rendered count", () => {
+	it("lets subclasses set the visible line limit, style the borders and read the rendered count", () => {
 		const editor = new TallEditor(new TuiMainScreen(new VirtualTerminal(40, 24)), defaultEditorTheme);
 		editor.setText(Array.from({ length: 12 }, (_, i) => `line ${i}`).join("\n"));
 
@@ -20,6 +24,7 @@ describe("Editor frame hooks", () => {
 
 		assert.strictEqual(editor.renderedVisibleLineCount, 8);
 		assert.strictEqual(lines.length, 10);
-		assert.match(lines[0], /↑ 4 more/);
+		assert.match(lines[0], /^<─+ ↑ 4 more ─+>$/);
+		assert.match(lines[9], /^<─+>$/);
 	});
 });

@@ -56,25 +56,25 @@ export class CustomEditor extends Editor {
 		if (canFitOverflow()) {
 			const leftBlockWidth = 3 + statusWidth + 1;
 			return (
-				this.borderColor("── ") +
+				this.borderStyle("── ") +
 				status +
-				this.borderColor(
+				this.borderStyle(
 					` ${"─".repeat(overflowStart - leftBlockWidth)}${overflowLabel}${"─".repeat(width - overflowStart - overflowLabelWidth)}`,
 				)
 			);
 		}
 
 		if (width >= statusWidth + 5) {
-			return this.borderColor("── ") + status + this.borderColor(` ${"─".repeat(width - statusWidth - 4)}`);
+			return this.borderStyle("── ") + status + this.borderStyle(` ${"─".repeat(width - statusWidth - 4)}`);
 		}
 
 		status = this.workingStatusIndicator.renderSpinnerInBorder(width);
 		statusWidth = visibleWidth(status);
 		const prefixWidth = Math.min(3, Math.max(0, width - statusWidth));
 		return (
-			this.borderColor("─".repeat(prefixWidth)) +
+			this.borderStyle("─".repeat(prefixWidth)) +
 			status +
-			this.borderColor("─".repeat(Math.max(0, width - prefixWidth - statusWidth)))
+			this.borderStyle("─".repeat(Math.max(0, width - prefixWidth - statusWidth)))
 		);
 	}
 
