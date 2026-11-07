@@ -368,9 +368,6 @@
         {
           "type": "object",
           "properties": {
-            "enableSkillCommands": {
-              "type": "boolean"
-            },
             "customDirectories": {
               "type": "array",
               "items": {
@@ -396,11 +393,6 @@
         "type": "string"
       },
       "description": "Local theme file paths or directories."
-    },
-    "enableSkillCommands": {
-      "type": "boolean",
-      "description": "Register skills as /skill:name commands.",
-      "default": true
     },
     "terminal": {
       "type": "object",

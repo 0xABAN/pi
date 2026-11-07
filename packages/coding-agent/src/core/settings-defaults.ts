@@ -31,7 +31,6 @@ export const SETTINGS_DEFAULTS = {
 	collapseChangelog: false,
 	enableInstallTelemetry: true,
 	enableAnalytics: false,
-	enableSkillCommands: true,
 	terminal: {
 		showImages: true,
 		imageWidthCells: 60,

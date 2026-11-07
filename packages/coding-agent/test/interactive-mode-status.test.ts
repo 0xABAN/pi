@@ -501,8 +501,6 @@ describe("InteractiveMode.createBaseAutocompleteProvider", () => {
 				extensionRunner: { getRegisteredCommands: () => [] };
 				resourceLoader: { getSkills: () => { skills: [] } };
 			};
-			settingsManager: { getEnableSkillCommands: () => boolean };
-			skillCommands: Map<string, string>;
 			sessionManager: { getCwd: () => string };
 			fdPath: null;
 		};
@@ -524,8 +522,6 @@ describe("InteractiveMode.createBaseAutocompleteProvider", () => {
 				extensionRunner: { getRegisteredCommands: () => [] },
 				resourceLoader: { getSkills: () => ({ skills: [] }) },
 			},
-			settingsManager: { getEnableSkillCommands: () => false },
-			skillCommands: new Map(),
 			sessionManager: { getCwd: () => "/tmp" },
 			fdPath: null,
 		};
@@ -551,8 +547,6 @@ describe("InteractiveMode.createBaseAutocompleteProvider", () => {
 				extensionRunner: { getRegisteredCommands: () => [] };
 				resourceLoader: { getSkills: () => { skills: [] } };
 			};
-			settingsManager: { getEnableSkillCommands: () => boolean };
-			skillCommands: Map<string, string>;
 			sessionManager: { getCwd: () => string };
 			fdPath: null;
 			getLoginProviderOptions: () => AuthSelectorProvider[];
@@ -571,8 +565,6 @@ describe("InteractiveMode.createBaseAutocompleteProvider", () => {
 				extensionRunner: { getRegisteredCommands: () => [] },
 				resourceLoader: { getSkills: () => ({ skills: [] }) },
 			},
-			settingsManager: { getEnableSkillCommands: () => false },
-			skillCommands: new Map(),
 			sessionManager: { getCwd: () => "/tmp" },
 			fdPath: null,
 			getLoginProviderOptions: () => [

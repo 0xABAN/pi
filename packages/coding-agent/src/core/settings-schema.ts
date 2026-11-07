@@ -194,7 +194,6 @@ const SkillsInputSchema = Type.Union(
 		StringArraySchema,
 		Type.Object(
 			{
-				enableSkillCommands: Type.Optional(Type.Boolean()),
 				customDirectories: Type.Optional(StringArraySchema),
 			},
 			{ deprecated: true },
@@ -329,12 +328,6 @@ export const SettingsSchema = Type.Object(
 			Type.Array(Type.String(), { description: "Local prompt template file paths or directories." }),
 		),
 		themes: Type.Optional(Type.Array(Type.String(), { description: "Local theme file paths or directories." })),
-		enableSkillCommands: Type.Optional(
-			Type.Boolean({
-				description: "Register skills as /skill:name commands.",
-				default: SETTINGS_DEFAULTS.enableSkillCommands,
-			}),
-		),
 		terminal: Type.Optional(TerminalSettingsSchema),
 		images: Type.Optional(ImageSettingsSchema),
 		enabledModels: Type.Optional(

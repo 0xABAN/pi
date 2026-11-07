@@ -121,7 +121,7 @@ describe("generated configuration schemas", () => {
 				extensionSetting: { enabled: true },
 				queueMode: "all",
 				websockets: true,
-				skills: { enableSkillCommands: true, customDirectories: ["./skills"] },
+				skills: { customDirectories: ["./skills"] },
 				retry: { maxDelayMs: 1000 },
 			},
 			invalid: { cacheWarming: "always" },

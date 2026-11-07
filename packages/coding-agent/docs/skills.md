@@ -53,7 +53,7 @@ Summarize report.pdf using /skill:pdf-tools, then draft a reply with /skill:emai
 
 A reference is a word of its own, so `/skill:name` inside backticks or attached to other text stays plain text; punctuation right after the name, such as a comma, is fine. Names that match no installed skill stay plain text too. In the editor, references that will load are drawn in the `customMessageLabel` color, the color of the `[skill]` label in the transcript. Typing `/` after a space suggests skills, filtered by the rest of the name; choosing one inserts `/skill:name`. Prompt templates expand first, so a template can reference skills.
 
-Set `disable-model-invocation: true` in frontmatter when a skill should be available only through its explicit command. The `enableSkillCommands` [setting](settings.md) controls whether skill commands appear in interactive command discovery; manually entered `/skill:name` commands still work.
+Set `disable-model-invocation: true` in frontmatter when a skill should be available only through its explicit command.
 
 <a id="choose-where-it-loads"></a>
 
