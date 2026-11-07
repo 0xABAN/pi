@@ -815,8 +815,9 @@ export class InteractiveMode {
 			}));
 
 		const skillCommandList: SlashCommand[] = this.session.resourceLoader.getSkills().skills.map((skill) => ({
-			name: `skill:${skill.name}`,
+			name: skill.name,
 			description: this.prefixAutocompleteDescription(skill.description, skill.sourceInfo),
+			inline: true,
 		}));
 
 		return new CombinedAutocompleteProvider(

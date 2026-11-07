@@ -2159,7 +2159,7 @@ export class AgentSession {
 		}
 		const { text: currentText, images: currentImages } = processedInput;
 
-		// Expand prompt templates (/template args) and skill references (/skill:name anywhere)
+		// Expand prompt templates (/template args) and skill references (/name anywhere)
 		let expandedText = currentText;
 		if (expandPromptTemplates) {
 			expandedText = expandPromptTemplate(expandedText, [...this.promptTemplates]);
@@ -2237,7 +2237,7 @@ export class AgentSession {
 	}
 
 	/**
-	 * Load each skill the text references (/skill:name anywhere) once, ahead of the unchanged text.
+	 * Load each skill the text references (/name anywhere) once, ahead of the unchanged text.
 	 * Returns the original text if it references no skill, already starts with loaded skills, or a skill file
 	 * cannot be read. Emits errors via extension runner if file read fails.
 	 */
@@ -3467,7 +3467,7 @@ export class AgentSession {
 			}));
 
 			const skills: SlashCommandInfo[] = this._resourceLoader.getSkills().skills.map((skill) => ({
-				name: `skill:${skill.name}`,
+				name: skill.name,
 				description: skill.description,
 				source: "skill",
 				sourceInfo: skill.sourceInfo,

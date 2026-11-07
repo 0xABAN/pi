@@ -350,7 +350,7 @@ function loadSkillFromFile(
  * See: https://agentskills.io/integrate-skills
  *
  * Skills with disableModelInvocation=true are excluded from the prompt
- * (they can only be invoked explicitly via /skill:name commands).
+ * (they can only be invoked explicitly by typing /name).
  *
  * `fileReadTool` names the tool that loads skill files; `indirect` names none, for a reader that
  * is reachable only through another tool.
@@ -395,7 +395,7 @@ export interface SkillReference {
 
 export function findSkillReferences(text: string, skills: readonly Skill[]): SkillReference[] {
 	const byName = new Map(skills.map((skill) => [skill.name, skill]));
-	return [...text.matchAll(/(?<!\S)\/skill:(\S+?)(?=[.,;:!?)]*(?:\s|$))/g)].flatMap((match) => {
+	return [...text.matchAll(/(?<!\S)\/(\S+?)(?=[.,;:!?)]*(?:\s|$))/g)].flatMap((match) => {
 		const skill = byName.get(match[1]!);
 		return skill ? [{ skill, start: match.index, end: match.index + match[0].length }] : [];
 	});

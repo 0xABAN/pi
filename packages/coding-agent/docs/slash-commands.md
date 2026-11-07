@@ -56,6 +56,6 @@ Review a session before exporting or sharing it. Sessions can contain prompts, t
 
 - Extensions can register commands with their own arguments and completion behavior.
 - Each prompt template is available under its template name.
-- Skills are available as `/skill:name` when skill commands are enabled.
+- Each skill is available under its skill name, also after a space anywhere in a prompt.
 
 Use `/reload` after adding or changing a discovered command resource. See [Extensions](extensions.md), [Prompt Templates](prompt-templates.md), and [Skills](skills.md) for their loading and naming rules.

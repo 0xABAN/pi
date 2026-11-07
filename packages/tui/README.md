@@ -720,7 +720,7 @@ editor.setAutocompleteProvider(provider);
 
 **Features:**
 - Type `/` to see slash commands
-- Type `/` after a space to see commands named `skill:…`, filtered by the rest of the name; choosing one inserts `/skill:name ` in place
+- Type `/` after a space to see the commands marked `inline: true`; choosing one inserts `/name ` in place
 - Press `Tab` for file path completion
 - Works with `~/`, `./`, `../`, and `@` prefix
 - Filters to attachable files for `@` prefix

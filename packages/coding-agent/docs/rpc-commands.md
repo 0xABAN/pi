@@ -30,7 +30,7 @@ If the agent is streaming and no `streamingBehavior` is specified, the command r
 
 **Extension commands**: If the message is an extension command (e.g., `/mycommand`), it executes immediately even during streaming. Extension commands manage their own LLM interaction via `pi.sendMessage()`.
 
-**Input expansion**: Prompt templates (`/template`) and skill references (`/skill:name`) are expanded before sending/queueing.
+**Input expansion**: Prompt templates (`/template`) and skill references (`/name`) are expanded before sending/queueing.
 
 Response:
 ```json
@@ -823,7 +823,7 @@ Each command has:
 - `source`: What kind of command:
   - `"extension"`: Registered via `pi.registerCommand()` in an extension
   - `"prompt"`: Loaded from a prompt template `.md` file
-  - `"skill"`: Loaded from a skill directory (name is prefixed with `skill:`)
+  - `"skill"`: Loaded from a skill directory
 - `sourceInfo`: Metadata for the resource that registered the command:
   - `path`: Absolute path to the resource
   - `source`: How Pi discovered it, such as `"local"`, `"auto"`, or `"cli"`

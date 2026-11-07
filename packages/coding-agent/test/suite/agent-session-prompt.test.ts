@@ -244,15 +244,15 @@ describe("AgentSession prompt characterization", () => {
 	}
 
 	it("expands skill commands before sending the prompt", async () => {
-		const expandedPrompt = await promptWithSkills(["test"], "/skill:test explain this");
+		const expandedPrompt = await promptWithSkills(["test"], "/test explain this");
 
 		expect(expandedPrompt).toContain('<skill name="test" location="');
 		expect(expandedPrompt).toContain("Use the test body.");
-		expect(expandedPrompt).toMatch(/<\/skill>\n\n\/skill:test explain this$/);
+		expect(expandedPrompt).toMatch(/<\/skill>\n\n\/test explain this$/);
 	});
 
 	it("loads each skill referenced anywhere once, ahead of the unchanged prompt", async () => {
-		const prompt = "use /skill:review then /skill:ship, again /skill:review, not `/skill:ship` or /skill:missing";
+		const prompt = "use /review then /ship, again /review, not `/ship`, /missing or /skill:ship";
 		const expandedPrompt = await promptWithSkills(["review", "ship"], prompt);
 
 		expect(expandedPrompt.match(/<skill name=/g)).toHaveLength(2);
@@ -265,7 +265,7 @@ describe("AgentSession prompt characterization", () => {
 	});
 
 	it("does not load skills mentioned only inside backticks", async () => {
-		const prompt = "explain `/skill:review`";
+		const prompt = "explain `/review`";
 		expect(await promptWithSkills(["review"], prompt)).toBe(prompt);
 	});
 

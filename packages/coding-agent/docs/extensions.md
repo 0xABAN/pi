@@ -314,7 +314,7 @@ A prompt starts a run. Input handling comes first:
 
 1. Extension commands (`/name`) run their handler. The `input` event does not fire. Typed and RPC prompts always check for commands; `pi.sendUserMessage()` checks only with `expandPromptTemplates: true`.
 2. `input` handlers can intercept, transform, or handle the text.
-3. Prompt templates (`/template`) expand, then skill references (`/skill:name`, anywhere in the text) load.
+3. Prompt templates (`/template`) expand, then skill references (`/name`, anywhere in the text) load.
 4. `before_agent_start` runs, then the agent loop starts.
 
 The run repeats turns, then checks whether more work starts another low-level agent run:
@@ -1109,13 +1109,13 @@ Returning `undefined` continues to the next handler, then local execution if non
 
 #### input
 
-Fired when user input is received, after extension commands are checked but before skill and template expansion. The event sees the raw input text, so `/skill:foo` and `/template` are not yet expanded.
+Fired when user input is received, after extension commands are checked but before skill and template expansion. The event sees the raw input text, so `/template` and skill references such as `/foo` are not yet expanded.
 
 **Processing order:**
 1. Extension commands (`/cmd`) checked first - if found, handler runs and input event is skipped. Messages from `pi.sendUserMessage()` are checked only with `expandPromptTemplates: true`.
 2. `input` event fires - can intercept, transform, or handle
 3. If not handled: prompt templates (`/template`) expanded to template content
-4. If not handled: skills referenced as `/skill:name` loaded ahead of the text
+4. If not handled: skills referenced as `/name` loaded ahead of the text
 5. Agent processing begins (`before_agent_start`, etc.)
 
 ```typescript
@@ -1140,8 +1140,8 @@ pi.on("input", async (event, ctx) => {
   // Route by source: skip processing for extension-injected messages
   if (event.source === "extension") return { action: "continue" };
 
-  // Intercept skill commands before expansion
-  if (event.text.startsWith("/skill:")) {
+  // Intercept a skill reference before expansion
+  if (/(^|\s)\/brainstorm\b/.test(event.text)) {
     // Could transform, block, or let pass through
   }
 
@@ -1770,7 +1770,7 @@ pi.registerCommand("deploy", {
 ### pi.getCommands()
 
 Get the slash commands available for invocation via `prompt` in the current session. Includes extension commands, prompt templates, and skill commands.
-The list matches the RPC `get_commands` ordering: extensions first, then templates, then skills. Skill commands are named `skill:<name>`.
+The list matches the RPC `get_commands` ordering: extensions first, then templates, then skills. Each command is named as it is typed after `/`.
 
 ```typescript
 const commands = pi.getCommands();

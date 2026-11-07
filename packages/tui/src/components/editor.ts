@@ -1267,7 +1267,7 @@ export class Editor implements Component, Focusable {
 
 		// Check if we should trigger or update autocomplete
 		if (!this.autocompleteState) {
-			// Auto-trigger for "/" at the start of a line (slash commands) or of a word (inline skills)
+			// Auto-trigger for "/" at the start of a line (slash commands) or of a word (inline commands)
 			if (char === "/" && (this.isAtStartOfMessage() || this.isInInlineSlashToken())) {
 				this.tryTriggerAutocomplete();
 			}

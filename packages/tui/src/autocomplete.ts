@@ -6,7 +6,7 @@ import { fuzzyFilter } from "./fuzzy.ts";
 import { autocompleteBoundaryRegex, autocompleteSeparatorRegex } from "./utils.ts";
 
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
-export const inlineSlashTokenRegex = /(?:^|\s)\/([a-z0-9:-]*)$/;
+export const inlineSlashTokenRegex = /(?:^|\s)\/([a-z0-9-]*)$/;
 const tokenStartRegex = new RegExp(`${autocompleteBoundaryRegex.source}$`, "u");
 // Opening wrappers that may precede a path in prose, mapped to their closing counterpart.
 const PATH_WRAPPERS: Record<string, string> = { "(": ")", "[": "]", "{": "}", "<": ">", "`": "`" };
@@ -256,6 +256,7 @@ export interface SlashCommand {
 	name: string;
 	description?: string;
 	argumentHint?: string;
+	inline?: boolean;
 	// Function to get argument completions for this command
 	// Returns null if no argument completion is available
 	getArgumentCompletions?(argumentPrefix: string): Awaitable<AutocompleteItem[] | null>;
@@ -333,9 +334,9 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 			};
 		}
 
-		const inlineSkillPrefix = options.force ? null : this.extractInlineSkillPrefix(cursorLine, textBeforeCursor);
-		if (inlineSkillPrefix !== null) {
-			return this.getInlineSkillSuggestions(inlineSkillPrefix);
+		const inlinePrefix = options.force ? null : this.extractInlinePrefix(cursorLine, textBeforeCursor);
+		if (inlinePrefix !== null) {
+			return this.getInlineSuggestions(inlinePrefix);
 		}
 
 		const commandText = textBeforeCursor.trimStart();
@@ -344,22 +345,7 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 
 			if (spaceIndex === -1) {
 				const prefix = commandText.slice(1);
-				const commandItems = this.getCommandItems();
-
-				const bareNameMatches = fuzzyFilter(commandItems, prefix, (item) =>
-					item.name.startsWith("skill:") ? item.name.slice("skill:".length) : item.name,
-				);
-				const bareNameMatchSet = new Set(bareNameMatches);
-				const fullNameOnlyMatches = fuzzyFilter(
-					commandItems.filter((item) => item.name.startsWith("skill:") && !bareNameMatchSet.has(item)),
-					prefix,
-					(item) => item.name,
-				);
-				const filtered = [...bareNameMatches, ...fullNameOnlyMatches].map((item) => ({
-					value: item.name,
-					label: item.label,
-					...(item.description && { description: item.description }),
-				}));
+				const filtered = this.filterCommandItems(this.commands, prefix);
 
 				if (filtered.length === 0) return null;
 
@@ -417,7 +403,7 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 		const afterCursor = currentLine.slice(cursorCol);
 		const isQuotedPrefix = prefix.startsWith('"') || prefix.startsWith('@"');
 
-		if (!prefix.startsWith("/") && item.value.startsWith("skill:")) {
+		if (this.extractInlinePrefix(cursorLine, currentLine.slice(0, cursorCol)) === prefix) {
 			const separator = /^\s/.test(afterCursor) ? "" : " ";
 			const newLines = [...lines];
 			newLines[cursorLine] = beforePrefix + item.value + separator + afterCursor;
@@ -522,21 +508,22 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 	}
 
 	// Extract a path-like prefix from the text before cursor
-	private getCommandItems(): { name: string; label: string; description: string | undefined }[] {
-		return this.commands.map((cmd) => {
+	private filterCommandItems(commands: (SlashCommand | AutocompleteItem)[], query: string): AutocompleteItem[] {
+		const commandItems = commands.map((cmd) => {
 			const name = "name" in cmd ? cmd.name : cmd.value;
 			const hint = "argumentHint" in cmd && cmd.argumentHint ? cmd.argumentHint : undefined;
 			const desc = cmd.description ?? "";
 			const fullDesc = hint ? (desc ? `${hint} — ${desc}` : hint) : desc;
 			return {
-				name,
+				value: name,
 				label: name,
-				description: fullDesc || undefined,
+				...(fullDesc && { description: fullDesc }),
 			};
 		});
+		return fuzzyFilter(commandItems, query, (item) => item.value);
 	}
 
-	private extractInlineSkillPrefix(cursorLine: number, textBeforeCursor: string): string | null {
+	private extractInlinePrefix(cursorLine: number, textBeforeCursor: string): string | null {
 		const match = textBeforeCursor.match(inlineSlashTokenRegex);
 		if (!match) return null;
 
@@ -545,15 +532,9 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 		return leadsMessage ? null : match[1]!;
 	}
 
-	private getInlineSkillSuggestions(prefix: string): AutocompleteSuggestions | null {
-		const skills = this.getCommandItems().filter((item) => item.name.startsWith("skill:"));
-		const items = fuzzyFilter(skills, prefix.replace(/^skill:/, ""), (item) => item.name.slice("skill:".length)).map(
-			(item) => ({
-				value: item.name,
-				label: item.label,
-				...(item.description && { description: item.description }),
-			}),
-		);
+	private getInlineSuggestions(prefix: string): AutocompleteSuggestions | null {
+		const inlineCommands = this.commands.filter((cmd) => "inline" in cmd && cmd.inline);
+		const items = this.filterCommandItems(inlineCommands, prefix);
 		return items.length > 0 ? { items, prefix } : null;
 	}
 
