@@ -490,6 +490,12 @@ export {
 	type ThemeStyle,
 	type ThemeToken,
 } from "./modes/interactive/theme/theme.ts";
+export {
+	renderToolRow,
+	type ToolRowState,
+	type ToolRowStatus,
+} from "./modes/interactive/transcript/tool-row.ts";
+export { transcriptBodyPadding } from "./modes/interactive/transcript/transcript-container.ts";
 // Clipboard utilities
 export { copyToClipboard } from "./utils/clipboard.ts";
 export { parseFrontmatter, stripFrontmatter } from "./utils/frontmatter.ts";

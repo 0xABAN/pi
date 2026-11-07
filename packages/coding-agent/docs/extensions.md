@@ -3194,6 +3194,21 @@ pi.sendMessage({
 });
 ```
 
+To draw a message as a transcript row, like a tool call's, use `renderToolRow(summary, state, width)` and indent it by `transcriptBodyPadding(outputPad, width)`. The state's `status` is `"waiting"`, `"running"`, `"done"` or `"failed"`, with an optional `durationMs` and `error`:
+
+```typescript
+import { renderToolRow, transcriptBodyPadding } from "@earendil-works/pi-coding-agent";
+
+pi.registerMessageRenderer("deploy-done", (message, options) => ({
+  render(width) {
+    const padding = transcriptBodyPadding(options.outputPad, width);
+    const summary = { label: "Deploy", icon: "↑", target: String(message.content) };
+    return renderToolRow(summary, { status: "done" }, width - padding).map((line) => " ".repeat(padding) + line);
+  },
+  invalidate() {},
+}));
+```
+
 For TUI-only content that should not be sent to the LLM, render custom entries instead:
 
 ```typescript
