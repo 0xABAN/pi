@@ -71,7 +71,8 @@ describe("CustomEditor selection page keybindings", () => {
 		editor.handleInput("\r");
 
 		expect(pastes).toBe(0);
-		expect(submitted).toBe("/command-5");
+		expect(editor.getText()).toBe("/command-5");
+		expect(submitted).toBe("");
 
 		editor.handleInput("\x16"); // Ctrl+V with autocomplete closed pastes again
 		expect(pastes).toBe(1);
