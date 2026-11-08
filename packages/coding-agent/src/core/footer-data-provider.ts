@@ -80,6 +80,23 @@ function resolveBranchWithGitAsync(repoDir: string): Promise<string | null> {
 	});
 }
 
+function countUnstagedChanges(repoDir: string): Promise<number> {
+	return new Promise((resolvePromise) => {
+		execFile(
+			"git",
+			["--no-optional-locks", "status", "--porcelain", "--untracked-files=no"],
+			{ cwd: repoDir, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+			(error: ExecFileException | null, stdout: string) => {
+				if (error) {
+					resolvePromise(0);
+					return;
+				}
+				resolvePromise(stdout.split("\n").filter((line) => line.length > 1 && line[1] !== " ").length);
+			},
+		);
+	});
+}
+
 function isWslEnvironment(): boolean {
 	return process.platform === "linux" && !!(process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP);
 }
@@ -111,6 +128,9 @@ export class FooterDataProvider {
 	private reftableTablesListPath: string | null = null;
 	private branchChangeCallbacks = new Set<() => void>();
 	private availableProviderCount = 0;
+	private gitChanges = 0;
+	private gitChangesRefresh: Promise<void> | undefined;
+	private gitChangesStale = false;
 	private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	private gitWatcherRetryTimer: ReturnType<typeof setTimeout> | null = null;
 	private refreshInFlight = false;
@@ -129,6 +149,30 @@ export class FooterDataProvider {
 			this.cachedBranch = this.resolveGitBranchSync();
 		}
 		return this.cachedBranch;
+	}
+
+	getGitChanges(): number {
+		return this.gitChanges;
+	}
+
+	refreshGitChanges(): Promise<void> {
+		if (this.gitChangesRefresh) {
+			this.gitChangesStale = true;
+			return this.gitChangesRefresh;
+		}
+
+		const refresh = this.countGitChanges().finally(() => {
+			this.gitChangesRefresh = undefined;
+		});
+		this.gitChangesRefresh = refresh;
+		return refresh;
+	}
+
+	private async countGitChanges(): Promise<void> {
+		do {
+			this.gitChangesStale = false;
+			this.gitChanges = this.gitPaths ? await countUnstagedChanges(this.gitPaths.repoDir) : 0;
+		} while (this.gitChangesStale && !this.disposed);
 	}
 
 	/** Extension status texts set via ctx.ui.setStatus() */
@@ -384,5 +428,5 @@ export class FooterDataProvider {
 /** Read-only view for extensions - excludes setExtensionStatus, setAvailableProviderCount and dispose */
 export type ReadonlyFooterDataProvider = Pick<
 	FooterDataProvider,
-	"getGitBranch" | "getExtensionStatuses" | "getAvailableProviderCount" | "onBranchChange"
+	"getGitBranch" | "getGitChanges" | "getExtensionStatuses" | "getAvailableProviderCount" | "onBranchChange"
 >;

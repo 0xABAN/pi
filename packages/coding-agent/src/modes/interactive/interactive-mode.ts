@@ -1110,7 +1110,9 @@ export class InteractiveMode {
 		// Set up git branch watcher (uses provider instead of footer)
 		this.footerDataProvider.onBranchChange(() => {
 			this.ui.requestRender();
+			this.refreshGitChanges();
 		});
+		this.refreshGitChanges();
 
 		// Initialize available provider count for footer display
 		await this.updateAvailableProviderCount();
@@ -2328,6 +2330,10 @@ export class InteractiveMode {
 		};
 	}
 
+	private refreshGitChanges(): void {
+		void this.footerDataProvider.refreshGitChanges().then(() => this.ui.requestRender());
+	}
+
 	/**
 	 * Set extension status text in the footer.
 	 */
@@ -3310,6 +3316,7 @@ export class InteractiveMode {
 					}
 					this.editor.addToHistory?.(text);
 					await this.handleBashCommand(command, isExcluded);
+					this.refreshGitChanges();
 					this.isBashMode = false;
 					this.updateEditorBorderColor();
 					return;
@@ -3595,6 +3602,7 @@ export class InteractiveMode {
 			}
 
 			case "tool_execution_end": {
+				this.refreshGitChanges();
 				if (event.isError) this.maybeShowInstallChangeWarning();
 				const component = this.pendingTools.get(event.toolCallId);
 				if (component) {
@@ -3616,6 +3624,7 @@ export class InteractiveMode {
 					this.streamingMessage = undefined;
 				}
 				this.pendingTools.clear();
+				this.refreshGitChanges();
 
 				this.ui.requestRender();
 				break;
