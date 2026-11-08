@@ -651,9 +651,9 @@ export class InteractiveMode {
 		this.documentContainer.addChild(this.loadedResourcesContainer);
 		this.documentContainer.addChild(this.chatContainer);
 		this.pendingMessagesContainer = new Container();
-		this.statusContainer = new Container();
-		this.widgetContainerAbove = new Container();
 		const dialogOpen = () => this.extensionDialogs.length > 0;
+		this.statusContainer = new HideableContainer(dialogOpen);
+		this.widgetContainerAbove = new Container();
 		this.widgetContainerBelow = new HideableContainer(dialogOpen);
 		this.keybindings = KeybindingsManager.create();
 		setKeybindings(this.keybindings);

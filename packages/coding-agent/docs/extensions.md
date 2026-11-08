@@ -2817,7 +2817,7 @@ For custom components, focus, overlays, themes, and rendering performance, see [
 
 ### Dialogs
 
-Dialogs and inline custom components take the editor's place. While one is open, Pi also hides the widgets below the editor and the footer, so nothing sits under it.
+Dialogs and inline custom components take the editor's place. While one is open, Pi also hides the working line above the editor, the widgets below it, and the footer.
 
 ```typescript
 // Select from options

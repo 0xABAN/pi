@@ -92,7 +92,7 @@ describe("InteractiveMode extension dialogs", () => {
 		expect(context.programStatus.setBlocked).toHaveBeenLastCalledWith("extension-dialog", undefined);
 	});
 
-	it("hides what sits below the editor while a dialog is open", async () => {
+	it("hides the working line, widgets below and footer while a dialog is open", async () => {
 		const context = createContext();
 		const footer = new HideableContainer(() => context.extensionDialogs.length > 0);
 		footer.addChild(new Text("footer", 0, 0));
