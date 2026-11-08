@@ -1,4 +1,4 @@
-import { type Component, Loader, type TUI, truncateToWidth } from "@earendil-works/pi-tui";
+import { type Component, Loader, type TUI } from "@earendil-works/pi-tui";
 import { theme } from "../theme/theme.ts";
 import { CountdownTimer } from "./countdown-timer.ts";
 import { keyText } from "./keybinding-hints.ts";
@@ -23,27 +23,18 @@ export class StatusIndicator extends Loader {
 		return super.render(width).slice(1);
 	}
 
-	renderInBorder(width: number): string {
-		const line = this.render(width + 2)[0] ?? "";
-		return truncateToWidth(line.startsWith(" ") ? line.slice(1).trimEnd() : line.trimEnd(), width, "");
-	}
-
-	renderSpinnerInBorder(width: number): string {
-		return truncateToWidth(this.getRenderedIndicator(), width, "");
-	}
-
 	dispose(): void {
 		this.stop();
 	}
 }
 
 export class WorkingStatusIndicator extends StatusIndicator {
-	constructor(ui: TUI, message: string, colorFn?: (text: string) => string) {
+	constructor(ui: TUI, message: string) {
 		super(
 			"working",
 			ui,
-			colorFn ?? ((text) => theme.fg("accent", text)),
-			colorFn ?? ((text) => theme.fg("muted", text)),
+			(text) => theme.fg("accent", text),
+			(text) => theme.fg("muted", text),
 			message,
 		);
 	}
@@ -84,7 +75,7 @@ export class RetryStatusIndicator extends StatusIndicator {
 export type CompactionStatusReason = "manual" | "threshold" | "overflow";
 
 export class CompactionStatusIndicator extends StatusIndicator {
-	constructor(ui: TUI, reason: CompactionStatusReason, colorFn?: (text: string) => string) {
+	constructor(ui: TUI, reason: CompactionStatusReason) {
 		const cancelHint = `(${keyText("app.interrupt")} to cancel)`;
 		const label =
 			reason === "manual"
@@ -93,8 +84,8 @@ export class CompactionStatusIndicator extends StatusIndicator {
 		super(
 			"compaction",
 			ui,
-			colorFn ?? ((spinner) => theme.fg("accent", spinner)),
-			colorFn ?? ((text) => theme.fg("muted", text)),
+			(spinner) => theme.fg("accent", spinner),
+			(text) => theme.fg("muted", text),
 			label,
 		);
 	}
