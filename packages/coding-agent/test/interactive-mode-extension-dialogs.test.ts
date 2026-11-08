@@ -1,5 +1,6 @@
 import { type Component, Container, Text } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { HideableContainer } from "../src/modes/interactive/components/hideable-container.ts";
 import { InteractiveMode } from "../src/modes/interactive/interactive-mode.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
 
@@ -89,6 +90,21 @@ describe("InteractiveMode extension dialogs", () => {
 		await expect(first).resolves.toBe(true);
 		expect(context.focused).toBe(context.editor);
 		expect(context.programStatus.setBlocked).toHaveBeenLastCalledWith("extension-dialog", undefined);
+	});
+
+	it("hides what sits below the editor while a dialog is open", async () => {
+		const context = createContext();
+		const footer = new HideableContainer(() => context.extensionDialogs.length > 0);
+		footer.addChild(new Text("footer", 0, 0));
+		const shown = () => footer.render(80).map((line) => line.trimEnd());
+		expect(shown()).toEqual(["footer"]);
+
+		const answer = context.showExtensionConfirm("Delete?", "delete the file");
+		expect(shown()).toEqual([]);
+
+		context.focused?.handleInput?.("\r");
+		await expect(answer).resolves.toBe(true);
+		expect(shown()).toEqual(["footer"]);
 	});
 
 	it("removes a hidden dialog when its signal aborts", async () => {
