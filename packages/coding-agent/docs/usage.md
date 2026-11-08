@@ -6,7 +6,7 @@ Pi may ask whether you trust the working folder before loading its project resou
 
 <p align="center"><img src="images/interactive-mode.png" alt="Pi interactive mode showing a conversation, editor, and status information" width="750"></p>
 
-The transcript shows your prompts, Pi's responses, tool calls, results, and errors. You write prompts and commands in the editor. The footer shows the current folder, session, model, context usage, and accumulated usage and cost.
+The transcript shows your prompts, Pi's responses, tool calls, results, and errors. You write prompts and commands in the editor. The editor's top border shows how long the last response took, extension statuses, and the git branch. The footer under the editor shows the model, the session cost, and how much of the context window is used.
 
 ## Enter a prompt
 
@@ -22,7 +22,7 @@ To include files or images:
 
 Pi shows each tool call and result while it works. Press `Ctrl+O` to expand or collapse tool output. Press `Ctrl+T` to show or hide thinking blocks.
 
-The startup header lists the instructions and resources Pi loaded. The editor border indicates the current thinking level. The footer updates as the model uses context and reports usage.
+The startup header lists the instructions and resources Pi loaded. The footer updates as the model uses context and reports usage, and a dim line under it repeats your latest prompt.
 
 Pi does not ask before every tool call. Review commands and changed files, and use a sandbox for untrusted or unattended work. See [Security](security.md).
 

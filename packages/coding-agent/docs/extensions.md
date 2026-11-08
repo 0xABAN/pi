@@ -196,7 +196,7 @@ export default function (pi: ExtensionAPI) {
     // ctx.ui for user interaction
     const ok = await ctx.ui.confirm("Title", "Are you sure?");
     ctx.ui.notify("Done!", "info");
-    ctx.ui.setStatus("my-ext", "Processing...");  // Footer status
+    ctx.ui.setStatus("my-ext", "Processing...");  // Badge on the editor
     ctx.ui.setWidget("my-ext", ["Line 1", "Line 2"]);  // Widget above editor (default)
   });
 
@@ -2817,7 +2817,7 @@ For custom components, focus, overlays, themes, and rendering performance, see [
 
 ### Dialogs
 
-Dialogs and inline custom components take the editor's place. While one is open, Pi also hides the working line above the editor, the widgets below it, and the footer.
+Dialogs and inline custom components take the editor's place. While one is open, Pi also hides the working line above the editor and everything below it: the footer, the widgets below the editor, and the last prompt line.
 
 ```typescript
 // Select from options
@@ -2889,11 +2889,15 @@ See [examples/extensions/timed-confirm.ts](../examples/extensions/timed-confirm.
 
 ### Widgets, Status, and Footer
 
-The working line is the row directly above the editor. Widgets placed above the editor appear over it.
+The working line is the row directly above the editor. Widgets placed above the editor appear over it. Below the editor come the footer, the widgets placed below the editor, and a dim line repeating the branch's latest prompt.
+
+The editor is drawn as a box. Its top border shows the last response time, extension statuses sorted by key, and the git branch with its count of changed files. As the terminal narrows, the change count goes first, then the response time, then the branch. The footer shows the model and footer-placed statuses on the left, and the session cost and context usage on the right.
 
 ```typescript
-// Status in footer (persistent until cleared)
+// Status badge on the editor's top border (persistent until cleared)
 ctx.ui.setStatus("my-ext", "Processing...");
+// Status on the footer, after the model
+ctx.ui.setStatus("my-ext", "think:high", { placement: "footer" });
 ctx.ui.setStatus("my-ext", undefined);  // Clear
 
 // Working loader (shown during streaming)
@@ -2925,7 +2929,7 @@ ctx.ui.setWidget("my-widget", (tui, theme) => new Text(theme.fg("accent", "Custo
 ctx.ui.setWidget("my-widget", undefined);  // Clear
 
 // Custom footer (replaces built-in footer entirely)
-// footerData provides the git branch and extension statuses from setStatus()
+// footerData provides the git branch, its changed-file count, and extension statuses from setStatus()
 ctx.ui.setFooter((tui, theme, footerData) => ({
   render(width) { return [theme.fg("dim", "Custom footer")]; },
   invalidate() {},
@@ -3149,6 +3153,7 @@ export default function (pi: ExtensionAPI) {
 **Key points:**
 - Extend `CustomEditor` (not base `Editor`) to get app keybindings (escape to abort, ctrl+d, model switching)
 - Call `super.handleInput(data)` for keys you don't handle
+- Custom editors are drawn in the same box as the built-in editor, with the same badges
 - Factory receives `tui`, `theme`, and `keybindings` from the app
 - Use `ctx.ui.getEditorComponent()` before `setEditorComponent()` to wrap the previously configured custom editor
 - Pass `undefined` to restore default: `ctx.ui.setEditorComponent(undefined)`
@@ -3334,7 +3339,7 @@ All examples in [examples/extensions/](../examples/extensions/).
 | `git-merge-and-resolve.ts` | Fetch, merge, and resolve conflicts | `on("agent_end")`, `exec`, `sendUserMessage` |
 | `auto-commit-on-exit.ts` | Commit on shutdown | `on("session_shutdown")`, `exec` |
 | **UI Components** |||
-| `status-line.ts` | Footer status indicator | `setStatus`, session events |
+| `status-line.ts` | Status badge on the editor | `setStatus`, session events |
 | `working-indicator.ts` | Customize the streaming working indicator | `setWorkingIndicator`, `registerCommand` |
 | `github-issue-autocomplete.ts` | Add `#1234` issue completions on top of built-in autocomplete by preloading recent open issues from `gh issue list` | `addAutocompleteProvider`, `on("session_start")`, `exec` |
 | `custom-footer.ts` | Replace footer entirely | `registerCommand`, `setFooter` |
