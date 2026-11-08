@@ -67,6 +67,20 @@ describe("inline command completion", () => {
 		assert.strictEqual(editor.getText(), "fix it /simplify ");
 		assert.strictEqual(submitted, undefined);
 	});
+
+	it("leaves one blank row under an open menu", async () => {
+		const editor = new Editor(new TuiMainScreen(new VirtualTerminal(80, 24)), defaultEditorTheme);
+		editor.setAutocompleteProvider(new CombinedAutocompleteProvider(commands, process.cwd()));
+		const closedHeight = editor.render(80).length;
+
+		for (const char of "/mod") editor.handleInput(char);
+		await flush();
+		const lines = editor.render(80);
+
+		assert.strictEqual(lines.length, closedHeight + 2);
+		assert.match(lines.at(-2)!, /model/);
+		assert.strictEqual(lines.at(-1), "");
+	});
 });
 
 describe("editor highlights", () => {

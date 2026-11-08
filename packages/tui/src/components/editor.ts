@@ -666,6 +666,7 @@ export class Editor implements Component, Focusable {
 				const linePadding = " ".repeat(Math.max(0, contentWidth - lineWidth));
 				result.push(`${leftPadding}${line}${linePadding}${rightPadding}`);
 			}
+			result.push("");
 		}
 
 		return result;
