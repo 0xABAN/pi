@@ -242,6 +242,29 @@ describe("ExtensionRunner", () => {
 			warnSpy.mockRestore();
 		});
 
+		it("allows a key that only a picker uses without a warning", async () => {
+			const extCode = `
+				export default function(pi) {
+					pi.registerShortcut("ctrl+s", {
+						description: "Uses the model picker's save key",
+						handler: async () => {},
+					});
+				}
+			`;
+			fs.writeFileSync(path.join(extensionsDir, "picker-key.ts"), extCode);
+
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			const result = await discoverAndLoadExtensions([], tempDir, tempDir);
+			const runner = new ExtensionRunner(result.extensions, result.runtime, tempDir, sessionManager, modelRegistry);
+			const shortcuts = runner.getShortcuts(defaultKeybindings);
+
+			expect(warnSpy).not.toHaveBeenCalled();
+			expect(shortcuts.has("ctrl+s")).toBe(true);
+
+			warnSpy.mockRestore();
+		});
+
 		it("blocks shortcuts for reserved actions even when rebound", async () => {
 			const extCode = `
 				export default function(pi) {

@@ -116,12 +116,39 @@ const RESERVED_KEYBINDINGS_FOR_EXTENSION_CONFLICTS = [
 	"tui.editor.deleteToLineEnd",
 ] as const;
 
+const PICKER_KEYBINDINGS = new Set<string>([
+	"app.thinking.save",
+	"app.session.toggleNamedFilter",
+	"app.session.togglePath",
+	"app.session.toggleSort",
+	"app.session.rename",
+	"app.session.delete",
+	"app.session.deleteNoninvasive",
+	"app.tree.foldOrUp",
+	"app.tree.unfoldOrDown",
+	"app.tree.editLabel",
+	"app.tree.toggleLabelTimestamp",
+	"app.tree.filter.default",
+	"app.tree.filter.noTools",
+	"app.tree.filter.userOnly",
+	"app.tree.filter.labeledOnly",
+	"app.tree.filter.all",
+	"app.tree.filter.cycleForward",
+	"app.tree.filter.cycleBackward",
+	"app.models.save",
+	"app.models.enableAll",
+	"app.models.clearAll",
+	"app.models.toggleProvider",
+	"app.models.reorderUp",
+	"app.models.reorderDown",
+]);
+
 type BuiltInKeyBindings = Partial<Record<KeyId, { keybinding: string; restrictOverride: boolean }>>;
 
 const buildBuiltinKeybindings = (resolvedKeybindings: KeybindingsConfig): BuiltInKeyBindings => {
 	const builtinKeybindings = {} as BuiltInKeyBindings;
 	for (const [keybinding, keys] of Object.entries(resolvedKeybindings)) {
-		if (keys === undefined) continue;
+		if (keys === undefined || PICKER_KEYBINDINGS.has(keybinding)) continue;
 		const keyList = Array.isArray(keys) ? keys : [keys];
 		const restrictOverride = (RESERVED_KEYBINDINGS_FOR_EXTENSION_CONFLICTS as readonly string[]).includes(keybinding);
 		for (const key of keyList) {
