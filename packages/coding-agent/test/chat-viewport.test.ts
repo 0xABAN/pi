@@ -10,6 +10,7 @@ describe("chat viewport", () => {
 			status: new Container(),
 			editor: new Container(),
 			footer: new Container(),
+			lastPrompt: new Container(),
 		});
 		const hidden = createChatViewport({
 			document: new Container(),
@@ -17,6 +18,7 @@ describe("chat viewport", () => {
 			status: new Container(),
 			editor: new Container(),
 			footer: new Container(),
+			lastPrompt: new Container(),
 			scrollbar: "hidden",
 		});
 
@@ -24,7 +26,7 @@ describe("chat viewport", () => {
 		expect(hidden.transcript.scrollbar).toBe("hidden");
 	});
 
-	test("shows the status line directly above the editor, below the widgets", () => {
+	test("stacks widgets and status above the editor, then the footer, widgets below and the last prompt", () => {
 		const label = (text: string) => new Text(text, 0, 0);
 		const viewport = createChatViewport({
 			document: label("transcript"),
@@ -34,6 +36,7 @@ describe("chat viewport", () => {
 			editor: label("editor"),
 			widgetsBelow: label("widgets below"),
 			footer: label("footer"),
+			lastPrompt: label("last prompt"),
 			scrollbar: "hidden",
 		});
 
@@ -42,6 +45,15 @@ describe("chat viewport", () => {
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0);
 
-		expect(lines).toEqual(["transcript", "pending", "widgets above", "status", "editor", "widgets below", "footer"]);
+		expect(lines).toEqual([
+			"transcript",
+			"pending",
+			"widgets above",
+			"status",
+			"editor",
+			"footer",
+			"widgets below",
+			"last prompt",
+		]);
 	});
 });

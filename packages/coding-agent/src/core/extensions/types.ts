@@ -63,7 +63,7 @@ import type { CacheWarmingDecisionEvent, CacheWarmingDecisionEventResult } from 
 import type { CompactionPreparation, CompactionResult } from "../compaction/index.ts";
 import type { EventBus } from "../event-bus.ts";
 import type { ExecOptions, ExecResult } from "../exec.ts";
-import type { ReadonlyFooterDataProvider } from "../footer-data-provider.ts";
+import type { ExtensionStatusPlacement, ReadonlyFooterDataProvider } from "../footer-data-provider.ts";
 import type { KeybindingsManager } from "../keybindings.ts";
 import type { McpServerConfig, McpServerRegistry, RegisteredMcpServer } from "../mcp-servers.ts";
 import type { CustomMessage } from "../messages.ts";
@@ -180,8 +180,11 @@ export interface ExtensionUIContext {
 	/** Listen to raw terminal input (interactive mode only). Returns an unsubscribe function. */
 	onTerminalInput(handler: TerminalInputHandler): () => void;
 
-	/** Set status text in the footer/status bar. Pass undefined to clear. */
-	setStatus(key: string, text: string | undefined): void;
+	/**
+	 * Set status text, shown as a badge in the editor's top border or on the footer bar after the model.
+	 * Pass undefined to clear.
+	 */
+	setStatus(key: string, text: string | undefined, options?: { placement?: ExtensionStatusPlacement }): void;
 
 	/** Set the working/loading message shown during streaming. Call with no argument to restore default. */
 	setWorkingMessage(message?: string): void;

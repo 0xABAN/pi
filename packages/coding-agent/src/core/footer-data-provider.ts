@@ -109,6 +109,8 @@ function shouldPollGitHead(repoDir: string): boolean {
 	return isWslEnvironment() && isWindowsMountedRepoPath(repoDir);
 }
 
+export type ExtensionStatusPlacement = "editor" | "footer";
+
 /**
  * Provides git branch and extension statuses - data not otherwise accessible to extensions.
  * Context usage on ctx.getContextUsage(), token stats on ctx.sessionManager.getEntries(), model info on ctx.model.
@@ -117,7 +119,10 @@ export class FooterDataProvider {
 	private cwd: string;
 	private static readonly WATCH_DEBOUNCE_MS = 500;
 
-	private extensionStatuses = new Map<string, string>();
+	private extensionStatuses: Record<ExtensionStatusPlacement, Map<string, string>> = {
+		editor: new Map(),
+		footer: new Map(),
+	};
 	private cachedBranch: string | null | undefined = undefined;
 	private gitPaths: GitPaths | null | undefined = undefined;
 	private headWatcher: FSWatcher | null = null;
@@ -127,7 +132,6 @@ export class FooterDataProvider {
 	private reftableTablesListWatcher: FSWatcher | null = null;
 	private reftableTablesListPath: string | null = null;
 	private branchChangeCallbacks = new Set<() => void>();
-	private availableProviderCount = 0;
 	private gitChanges = 0;
 	private gitChangesRefresh: Promise<void> | undefined;
 	private gitChangesStale = false;
@@ -176,8 +180,8 @@ export class FooterDataProvider {
 	}
 
 	/** Extension status texts set via ctx.ui.setStatus() */
-	getExtensionStatuses(): ReadonlyMap<string, string> {
-		return this.extensionStatuses;
+	getExtensionStatuses(placement: ExtensionStatusPlacement = "editor"): ReadonlyMap<string, string> {
+		return this.extensionStatuses[placement];
 	}
 
 	/** Subscribe to git branch changes. Returns unsubscribe function. */
@@ -187,27 +191,16 @@ export class FooterDataProvider {
 	}
 
 	/** Internal: set extension status */
-	setExtensionStatus(key: string, text: string | undefined): void {
-		if (text === undefined) {
-			this.extensionStatuses.delete(key);
-		} else {
-			this.extensionStatuses.set(key, text);
-		}
+	setExtensionStatus(key: string, text: string | undefined, placement: ExtensionStatusPlacement = "editor"): void {
+		this.extensionStatuses.editor.delete(key);
+		this.extensionStatuses.footer.delete(key);
+		if (text !== undefined) this.extensionStatuses[placement].set(key, text);
 	}
 
 	/** Internal: clear extension statuses */
 	clearExtensionStatuses(): void {
-		this.extensionStatuses.clear();
-	}
-
-	/** Number of unique providers with available models (for footer display) */
-	getAvailableProviderCount(): number {
-		return this.availableProviderCount;
-	}
-
-	/** Internal: update available provider count */
-	setAvailableProviderCount(count: number): void {
-		this.availableProviderCount = count;
+		this.extensionStatuses.editor.clear();
+		this.extensionStatuses.footer.clear();
 	}
 
 	setCwd(cwd: string): void {
@@ -425,8 +418,8 @@ export class FooterDataProvider {
 	}
 }
 
-/** Read-only view for extensions - excludes setExtensionStatus, setAvailableProviderCount and dispose */
+/** Read-only view for extensions - excludes setExtensionStatus and dispose */
 export type ReadonlyFooterDataProvider = Pick<
 	FooterDataProvider,
-	"getGitBranch" | "getGitChanges" | "getExtensionStatuses" | "getAvailableProviderCount" | "onBranchChange"
+	"getGitBranch" | "getGitChanges" | "getExtensionStatuses" | "onBranchChange"
 >;

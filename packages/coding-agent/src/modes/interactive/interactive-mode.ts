@@ -91,7 +91,11 @@ import type {
 	UserBashEventResult,
 	WorkingIndicatorOptions,
 } from "../../core/extensions/index.ts";
-import { FooterDataProvider, type ReadonlyFooterDataProvider } from "../../core/footer-data-provider.ts";
+import {
+	type ExtensionStatusPlacement,
+	FooterDataProvider,
+	type ReadonlyFooterDataProvider,
+} from "../../core/footer-data-provider.ts";
 import { configureHttpDispatcher, formatHttpIdleTimeoutMs } from "../../core/http-dispatcher.ts";
 import { type AppKeybinding, KeybindingsManager } from "../../core/keybindings.ts";
 import type { McpHttpServerConfig } from "../../core/mcp-servers.ts";
@@ -149,7 +153,7 @@ import { renderEditorBadges } from "./components/editor-badges.ts";
 import { ExtensionEditorComponent } from "./components/extension-editor.ts";
 import { ExtensionInputComponent } from "./components/extension-input.ts";
 import { ExtensionSelectorComponent } from "./components/extension-selector.ts";
-import { FooterComponent, formatTokens } from "./components/footer.ts";
+import { FooterComponent, formatTokens, LastPromptComponent, sortedStatuses } from "./components/footer.ts";
 import { HideableContainer } from "./components/hideable-container.ts";
 import { formatKeyText, keyDisplayText, keyHint, keyText, rawKeyHint } from "./components/keybinding-hints.ts";
 import { LoginDialogComponent } from "./components/login-dialog.ts";
@@ -474,6 +478,8 @@ export class InteractiveMode {
 	private activeSelectorDispose?: () => void;
 	private footer: FooterComponent;
 	private footerContainer: Container;
+	private lastPrompt: LastPromptComponent;
+	private lastPromptContainer: Container;
 	private footerDataProvider: FooterDataProvider;
 	// Stored so the same manager can be injected into custom editors, selectors, and extension UI.
 	private keybindings: KeybindingsManager;
@@ -660,9 +666,11 @@ export class InteractiveMode {
 		this.editorContainer.addChild(this.editor as Component);
 		this.footerDataProvider = new FooterDataProvider(this.sessionManager.getCwd());
 		this.footer = new FooterComponent(this.session, this.footerDataProvider);
-		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
 		this.footerContainer = new HideableContainer(dialogOpen);
 		this.footerContainer.addChild(this.footer);
+		this.lastPrompt = new LastPromptComponent(this.session);
+		this.lastPromptContainer = new HideableContainer(dialogOpen);
+		this.lastPromptContainer.addChild(this.lastPrompt);
 
 		// Load hide thinking block setting
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
@@ -982,8 +990,9 @@ export class InteractiveMode {
 			status: this.statusContainer,
 			widgetsAbove: this.widgetContainerAbove,
 			editor: this.editorContainer,
-			widgetsBelow: this.widgetContainerBelow,
 			footer: this.footerContainer,
+			widgetsBelow: this.widgetContainerBelow,
+			lastPrompt: this.lastPromptContainer,
 			scrollbar: this.settingsManager.getFullscreenScrollbar(),
 			scrollbarTrackStyle: (text) => theme.fg("scrollbarTrack", text),
 			scrollbarThumbStyle: (text) => theme.fg("scrollbarThumb", text),
@@ -996,8 +1005,9 @@ export class InteractiveMode {
 			this.widgetContainerAbove,
 			this.statusContainer,
 			this.editorContainer,
-			this.widgetContainerBelow,
 			this.footerContainer,
+			this.widgetContainerBelow,
+			this.lastPromptContainer,
 		]);
 		// Accept text while startup completes, but only enable interrupt, exit, and submission feedback.
 		this.defaultEditor.onAction("app.clear", () => this.handleCtrlC());
@@ -1120,9 +1130,6 @@ export class InteractiveMode {
 		});
 		this.refreshGitChanges();
 
-		// Initialize available provider count for footer display
-		await this.updateAvailableProviderCount();
-
 		// Flush the completed startup state before loading the remaining syntax grammars.
 		this.ui.renderNow();
 		void loadAllHighlightLanguages().then(() => {
@@ -1156,7 +1163,6 @@ export class InteractiveMode {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 15_000);
 			void refreshModelCatalogs(this.session.modelRuntime, controller.signal)
-				.then(() => this.updateAvailableProviderCount())
 				.catch(() => {})
 				.finally(() => clearTimeout(timeout));
 		}
@@ -2109,7 +2115,7 @@ export class InteractiveMode {
 			this.renderer.setWheelScrollLines(this.settingsManager.getFullscreenWheelScrollLines());
 		}
 		this.footer.setSession(this.session);
-		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+		this.lastPrompt.setSession(this.session);
 		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
 		this.outputPad = this.settingsManager.getOutputPad();
@@ -2152,7 +2158,6 @@ export class InteractiveMode {
 			this.subscribeToAgent();
 		}
 
-		await this.updateAvailableProviderCount();
 		this.updateEditorBorderColor();
 		this.updateTerminalTitle();
 	}
@@ -2337,14 +2342,10 @@ export class InteractiveMode {
 	}
 
 	private renderEditorBadges(budget: number): string {
-		const statuses = [...this.footerDataProvider.getExtensionStatuses()]
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([, text]) => text.replace(/[\r\n\t]+/g, " ").trim())
-			.filter(Boolean);
 		return renderEditorBadges(
 			{
 				response: this.responseTimer.text(performance.now()),
-				statuses,
+				statuses: sortedStatuses(this.footerDataProvider.getExtensionStatuses("editor")),
 				branch: this.footerDataProvider.getGitBranch(),
 				changes: this.footerDataProvider.getGitChanges(),
 			},
@@ -2359,8 +2360,8 @@ export class InteractiveMode {
 	/**
 	 * Set extension status text in the footer.
 	 */
-	private setExtensionStatus(key: string, text: string | undefined): void {
-		this.footerDataProvider.setExtensionStatus(key, text);
+	private setExtensionStatus(key: string, text: string | undefined, placement?: ExtensionStatusPlacement): void {
+		this.footerDataProvider.setExtensionStatus(key, text, placement);
 		this.ui.requestRender();
 	}
 
@@ -2664,7 +2665,7 @@ export class InteractiveMode {
 			input: (title, placeholder, opts) => this.showExtensionInput(title, placeholder, opts),
 			notify: (message, type) => this.showExtensionNotify(message, type),
 			onTerminalInput: (handler) => this.addExtensionTerminalInputListener(handler),
-			setStatus: (key, text) => this.setExtensionStatus(key, text),
+			setStatus: (key, text, options) => this.setExtensionStatus(key, text, options?.placement),
 			setWorkingMessage: (message) => {
 				this.workingMessage = message;
 				if (this.activeStatusIndicator?.kind === "working") {
@@ -4929,7 +4930,6 @@ export class InteractiveMode {
 				{
 					onAutoCompactChange: (enabled) => {
 						this.session.setAutoCompactionEnabled(enabled);
-						this.footer.setAutoCompactEnabled(enabled);
 					},
 					onShowImagesChange: (enabled) => {
 						this.settingsManager.setShowImages(enabled);
@@ -5217,16 +5217,6 @@ export class InteractiveMode {
 		return findExactModelReferenceMatch(searchTerm, [...this.session.modelRuntime.getAvailableSnapshot()]);
 	}
 
-	/** Update the footer's available provider count from the current snapshot without refreshing catalogs. */
-	private updateAvailableProviderCount(): void {
-		const models =
-			this.session.scopedModels.length > 0
-				? this.session.scopedModels.map((scoped) => scoped.model)
-				: this.session.modelRuntime.getAvailableSnapshot();
-		const uniqueProviders = new Set(models.map((model) => model.provider));
-		this.footerDataProvider.setAvailableProviderCount(uniqueProviders.size);
-	}
-
 	private async maybeWarnAboutAnthropicSubscriptionAuth(
 		model: Model<any> | undefined = this.session.model,
 	): Promise<void> {
@@ -5313,7 +5303,6 @@ export class InteractiveMode {
 			const selectModel = async (model: Model<any>, persist: boolean) => {
 				try {
 					await this.session.setModel(model, { persist });
-					this.updateAvailableProviderCount();
 					this.footer.invalidate();
 					this.updateEditorBorderColor();
 					done();
@@ -5381,7 +5370,6 @@ export class InteractiveMode {
 			} else {
 				this.session.setScopedModels([]);
 			}
-			this.updateAvailableProviderCount();
 			this.ui.requestRender();
 		};
 
@@ -6008,7 +5996,6 @@ export class InteractiveMode {
 						await this.session.modelRuntime.logout(providerOption.id, {
 							signal: AbortSignal.timeout(15_000),
 						});
-						await this.updateAvailableProviderCount();
 						const message =
 							providerOption.authType === "oauth"
 								? `Logged out of ${providerOption.name}`
@@ -6081,7 +6068,6 @@ export class InteractiveMode {
 				}
 			}
 
-			await this.updateAvailableProviderCount();
 			this.footer.invalidate();
 			this.updateEditorBorderColor();
 			if (selectedModel) {
@@ -6116,7 +6102,6 @@ export class InteractiveMode {
 				if (deferSelection && this.session === session && session.model === previousModel) {
 					await finishAuthentication();
 				}
-				this.updateAvailableProviderCount();
 				this.footer.invalidate();
 				this.ui.requestRender();
 			})
