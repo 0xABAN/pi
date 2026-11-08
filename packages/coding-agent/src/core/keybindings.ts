@@ -181,7 +181,12 @@ export const KEYBINDINGS = {
 	...TUI_KEYBINDINGS,
 	"tui.editor.undo": {
 		...TUI_KEYBINDINGS["tui.editor.undo"],
-		defaultKeys: process.platform === "win32" ? "ctrl+z" : windowsKeybindings ? "alt+z" : "ctrl+-",
+		defaultKeys:
+			process.platform === "win32"
+				? "ctrl+z"
+				: windowsKeybindings
+					? "alt+z"
+					: TUI_KEYBINDINGS["tui.editor.undo"].defaultKeys,
 	},
 	"tui.altScreen.previousPrompt": {
 		...TUI_KEYBINDINGS["tui.altScreen.previousPrompt"],

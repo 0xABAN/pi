@@ -925,6 +925,14 @@ export class Editor implements Component, Focusable {
 			this.moveToLineEnd();
 			return;
 		}
+		if (kb.matches(data, "tui.editor.cursorDocumentStart")) {
+			this.moveToDocumentStart();
+			return;
+		}
+		if (kb.matches(data, "tui.editor.cursorDocumentEnd")) {
+			this.moveToDocumentEnd();
+			return;
+		}
 		if (kb.matches(data, "tui.editor.cursorWordLeft")) {
 			this.moveWordBackwards();
 			return;
@@ -1667,6 +1675,18 @@ export class Editor implements Component, Focusable {
 		this.lastAction = null;
 		const currentLine = this.state.lines[this.state.cursorLine] || "";
 		this.setCursorCol(currentLine.length);
+	}
+
+	private moveToDocumentStart(): void {
+		this.lastAction = null;
+		this.state.cursorLine = 0;
+		this.setCursorCol(0);
+	}
+
+	private moveToDocumentEnd(): void {
+		this.lastAction = null;
+		this.state.cursorLine = this.state.lines.length - 1;
+		this.setCursorCol(this.state.lines[this.state.cursorLine]!.length);
 	}
 
 	private deleteToStartOfLine(): void {

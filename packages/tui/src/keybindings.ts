@@ -16,6 +16,8 @@ export interface Keybindings {
 	"tui.editor.cursorWordRight": true;
 	"tui.editor.cursorLineStart": true;
 	"tui.editor.cursorLineEnd": true;
+	"tui.editor.cursorDocumentStart": true;
+	"tui.editor.cursorDocumentEnd": true;
 	"tui.editor.jumpForward": true;
 	"tui.editor.jumpBackward": true;
 	"tui.editor.pageUp": true;
@@ -103,6 +105,14 @@ export const TUI_KEYBINDINGS = {
 		defaultKeys: ["end", "ctrl+e"],
 		description: "Move to line end",
 	},
+	"tui.editor.cursorDocumentStart": {
+		defaultKeys: "super+shift+up",
+		description: "Move to the start of the text",
+	},
+	"tui.editor.cursorDocumentEnd": {
+		defaultKeys: "super+shift+down",
+		description: "Move to the end of the text",
+	},
 	"tui.editor.jumpForward": {
 		defaultKeys: "ctrl+]",
 		description: "Jump forward to character",
@@ -139,7 +149,7 @@ export const TUI_KEYBINDINGS = {
 	},
 	"tui.editor.yank": { defaultKeys: "ctrl+y", description: "Yank" },
 	"tui.editor.yankPop": { defaultKeys: "alt+y", description: "Yank pop" },
-	"tui.editor.undo": { defaultKeys: "ctrl+-", description: "Undo" },
+	"tui.editor.undo": { defaultKeys: ["ctrl+-", "super+z"], description: "Undo" },
 	"tui.input.newLine": { defaultKeys: ["shift+enter", "ctrl+j"], description: "Insert newline" },
 	"tui.input.submit": { defaultKeys: "enter", description: "Submit input" },
 	"tui.input.tab": { defaultKeys: "tab", description: "Tab / autocomplete" },

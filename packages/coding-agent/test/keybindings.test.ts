@@ -28,8 +28,8 @@ describe("Windows keybinding defaults", () => {
 		expect(KEYBINDINGS["tui.altScreen.search"].defaultKeys).toBe(windowsKeybindings ? "ctrl+f" : "ctrl+shift+f");
 		expect(KEYBINDINGS["app.message.followUp"].defaultKeys).toBe(windowsKeybindings ? "ctrl+q" : "alt+enter");
 		expect(KEYBINDINGS["app.model.cycleBackward"].defaultKeys).toBe(windowsKeybindings ? "alt+p" : "shift+ctrl+p");
-		expect(KEYBINDINGS["tui.editor.undo"].defaultKeys).toBe(
-			nativeWindows ? "ctrl+z" : windowsKeybindings ? "alt+z" : "ctrl+-",
+		expect(KEYBINDINGS["tui.editor.undo"].defaultKeys).toEqual(
+			nativeWindows ? "ctrl+z" : windowsKeybindings ? "alt+z" : ["ctrl+-", "super+z"],
 		);
 		expect(KEYBINDINGS["tui.altScreen.previousPrompt"].defaultKeys).toEqual(
 			windowsKeybindings ? "ctrl+up" : ["ctrl+shift+up", "ctrl+up"],

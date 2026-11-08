@@ -60,6 +60,8 @@ Examples: `ctrl+shift+x`, `alt+ctrl+x`, `ctrl+shift+alt+x`, `super+k`, `ctrl+sup
 | `tui.editor.cursorWordRight` | `alt+right`, `ctrl+right`, `alt+f` | Move cursor word right |
 | `tui.editor.cursorLineStart` | `home`, `ctrl+a` | Move to line start |
 | `tui.editor.cursorLineEnd` | `end`, `ctrl+e` | Move to line end |
+| `tui.editor.cursorDocumentStart` | `super+shift+up` | Move to the start of the text |
+| `tui.editor.cursorDocumentEnd` | `super+shift+down` | Move to the end of the text |
 | `tui.editor.jumpForward` | `ctrl+]` | Jump forward to character |
 | `tui.editor.jumpBackward` | `ctrl+alt+]` | Jump backward to character |
 | `tui.editor.pageUp` | `pageUp`, `ctrl+pageUp` | Scroll up by page |
@@ -79,7 +81,7 @@ The dedicated history actions browse prompt history regardless of cursor positio
 | `tui.editor.deleteToLineEnd` | `ctrl+k` | Delete to line end |
 | `tui.editor.yank` | `ctrl+y` | Paste most recently deleted text |
 | `tui.editor.yankPop` | `alt+y` | Cycle through deleted text after yank |
-| `tui.editor.undo` | `ctrl+-` (`ctrl+z` on Windows; `alt+z` on WSL) | Undo last edit |
+| `tui.editor.undo` | `ctrl+-`, `super+z` (`ctrl+z` on Windows; `alt+z` on WSL) | Undo last edit |
 
 #### Input and selection
 

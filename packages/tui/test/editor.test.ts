@@ -316,6 +316,20 @@ describe("Editor component", () => {
 		});
 	});
 
+	describe("Document navigation", () => {
+		it("moves to the start and end of the whole text with super+shift+up and down", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+			editor.setText("first\nsecond\nthird line");
+			editor.handleInput("\x1b[A");
+
+			editor.handleInput("\x1b[1;10A");
+			assert.deepStrictEqual(editor.getCursor(), { line: 0, col: 0 });
+
+			editor.handleInput("\x1b[1;10B");
+			assert.deepStrictEqual(editor.getCursor(), { line: 2, col: 10 });
+		});
+	});
+
 	describe("Backslash+Enter newline workaround", () => {
 		it("inserts backslash immediately (no buffering)", () => {
 			const editor = new Editor(createTestTUI(), defaultEditorTheme);
@@ -1595,6 +1609,14 @@ describe("Editor component", () => {
 	});
 
 	describe("Undo", () => {
+		it("undoes with super+z", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+
+			for (const char of "hello") editor.handleInput(char);
+			editor.handleInput("\x1b[122;9u");
+			assert.strictEqual(editor.getText(), "");
+		});
+
 		it("does nothing when undo stack is empty", () => {
 			const editor = new Editor(createTestTUI(), defaultEditorTheme);
 

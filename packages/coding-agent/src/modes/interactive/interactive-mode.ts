@@ -6807,6 +6807,8 @@ export class InteractiveMode {
 		const cursorWordRight = this.getEditorKeyDisplay("tui.editor.cursorWordRight");
 		const cursorLineStart = this.getEditorKeyDisplay("tui.editor.cursorLineStart");
 		const cursorLineEnd = this.getEditorKeyDisplay("tui.editor.cursorLineEnd");
+		const cursorDocumentStart = this.getEditorKeyDisplay("tui.editor.cursorDocumentStart");
+		const cursorDocumentEnd = this.getEditorKeyDisplay("tui.editor.cursorDocumentEnd");
 		const jumpForward = this.getEditorKeyDisplay("tui.editor.jumpForward");
 		const jumpBackward = this.getEditorKeyDisplay("tui.editor.jumpBackward");
 		const pageUp = this.getEditorKeyDisplay("tui.editor.pageUp");
@@ -6849,6 +6851,7 @@ export class InteractiveMode {
 | \`${cursorWordLeft}\` / \`${cursorWordRight}\` | Move by word |
 | \`${cursorLineStart}\` | Start of line |
 | \`${cursorLineEnd}\` | End of line |
+| \`${cursorDocumentStart}\` / \`${cursorDocumentEnd}\` | Start / end of the text |
 | \`${jumpForward}\` | Jump forward to character |
 | \`${jumpBackward}\` | Jump backward to character |
 | \`${pageUp}\` / \`${pageDown}\` | Scroll by page |
