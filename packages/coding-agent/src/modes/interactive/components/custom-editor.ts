@@ -1,5 +1,20 @@
-import { Editor, type EditorOptions, type EditorTheme, type TUI } from "@earendil-works/pi-tui";
+import {
+	Editor,
+	type EditorOptions,
+	type EditorTheme,
+	stripTerminalSequences,
+	type TUI,
+	type TuiMouseEvent,
+	type TuiMouseEventResult,
+	truncateToWidth,
+	visibleWidth,
+} from "@earendil-works/pi-tui";
 import type { AppKeybinding, KeybindingsManager } from "../../../core/keybindings.ts";
+import { theme } from "../theme/theme.ts";
+
+const BOX_MIN_WIDTH = 12;
+const BOX_LEFT = 4;
+const BOX_FRAME = BOX_LEFT + 1;
 
 /**
  * Custom editor that handles app-level keybindings for coding-agent.
@@ -14,10 +29,45 @@ export class CustomEditor extends Editor {
 	public onPasteImage?: () => void;
 	/** Handler for extension-registered shortcuts. Returns true if handled. */
 	public onExtensionShortcut?: (data: string) => boolean;
+	public badges?: (budget: number) => string;
 
-	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager, options?: EditorOptions) {
-		super(tui, theme, options);
+	constructor(tui: TUI, editorTheme: EditorTheme, keybindings: KeybindingsManager, options?: EditorOptions) {
+		super(tui, editorTheme, options);
 		this.keybindings = keybindings;
+	}
+
+	protected override maxVisibleLines(): number {
+		return Math.max(5, Math.floor(this.tui.terminal.rows * 0.4));
+	}
+
+	override render(width: number): string[] {
+		if (width < BOX_MIN_WIDTH) return super.render(width);
+
+		const lines = super.render(width - BOX_FRAME);
+		const bottom = this.renderedVisibleLineCount + 1;
+		const prompt = ` ${theme.fg("accent", "◆")} `;
+		const side = this.borderStyle("│");
+
+		return [
+			this.renderBoxTop(lines[0]!, width),
+			...lines.slice(1, bottom).map((line, index) => side + (index === 0 ? prompt : "   ") + line + side),
+			this.borderStyle("╰───") + lines[bottom] + this.borderStyle("╯"),
+			...lines.slice(bottom + 1).map((line) => " ".repeat(BOX_LEFT) + line),
+		];
+	}
+
+	private renderBoxTop(rule: string, width: number): string {
+		const ruleLabelWidth = visibleWidth(stripTerminalSequences(rule).replace(/─+$/, ""));
+		const badges = this.badges?.(width - ruleLabelWidth - 8) ?? "";
+		if (!badges) return this.borderStyle("╭───") + rule + this.borderStyle("╮");
+
+		const left = truncateToWidth(this.borderStyle("╭───") + rule, width - visibleWidth(badges) - 5, "");
+		return `${left} ${badges} ${this.borderStyle("──╮")}`;
+	}
+
+	override handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
+		if (event.width < BOX_MIN_WIDTH) return super.handleMouse(event);
+		return super.handleMouse({ ...event, x: event.x - BOX_LEFT, width: event.width - BOX_FRAME });
 	}
 
 	/**

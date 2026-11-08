@@ -145,6 +145,7 @@ import { CustomMessageComponent } from "./components/custom-message.ts";
 import { DynamicBorder } from "./components/dynamic-border.ts";
 import { EarendilAnnouncementComponent } from "./components/earendil-announcement.ts";
 import { playArmin3d, playPiLogo3d } from "./components/easter-egg-3d.lazy.ts";
+import { renderEditorBadges } from "./components/editor-badges.ts";
 import { ExtensionEditorComponent } from "./components/extension-editor.ts";
 import { ExtensionInputComponent } from "./components/extension-input.ts";
 import { ExtensionSelectorComponent } from "./components/extension-selector.ts";
@@ -185,6 +186,7 @@ import { editInExternalEditor } from "./external-editor.ts";
 import { refreshModelCatalogs } from "./model-catalog-refresh.ts";
 import { getModelSearchText } from "./model-search.ts";
 import { type BlockedStatus, ProgramStatusReporter } from "./program-status-reporter.ts";
+import { ResponseTimer } from "./response-timer.ts";
 import { shareSession } from "./session-share.ts";
 import {
 	getAvailableThemes,
@@ -480,6 +482,9 @@ export class InteractiveMode {
 	private onInputCallback?: (text: string) => void;
 	private pendingUserInputs: string[] = [];
 	private activeStatusIndicator: StatusIndicator | undefined = undefined;
+	private readonly responseTimer = new ResponseTimer();
+	private responseTicker: ReturnType<typeof setInterval> | undefined;
+	private responseFailed = false;
 	private readonly idleStatus = new IdleStatus();
 	private workingMessage: string | undefined = undefined;
 	private workingVisible = true;
@@ -649,6 +654,7 @@ export class InteractiveMode {
 			autocompleteMaxVisible,
 		});
 		this.defaultEditor.setHighlighter(this.editorHighlighter);
+		this.defaultEditor.badges = (budget) => this.renderEditorBadges(budget);
 		this.editor = this.defaultEditor;
 		this.editorContainer = new Container();
 		this.editorContainer.addChild(this.editor as Component);
@@ -2330,6 +2336,22 @@ export class InteractiveMode {
 		};
 	}
 
+	private renderEditorBadges(budget: number): string {
+		const statuses = [...this.footerDataProvider.getExtensionStatuses()]
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([, text]) => text.replace(/[\r\n\t]+/g, " ").trim())
+			.filter(Boolean);
+		return renderEditorBadges(
+			{
+				response: this.responseTimer.text(performance.now()),
+				statuses,
+				branch: this.footerDataProvider.getGitBranch(),
+				changes: this.footerDataProvider.getGitChanges(),
+			},
+			budget,
+		);
+	}
+
 	private refreshGitChanges(): void {
 		void this.footerDataProvider.refreshGitChanges().then(() => this.ui.requestRender());
 	}
@@ -2892,6 +2914,9 @@ export class InteractiveMode {
 				if (!customEditor.onPasteImage) {
 					customEditor.onPasteImage = () => this.defaultEditor.onPasteImage?.();
 				}
+				if (!customEditor.badges) {
+					customEditor.badges = this.defaultEditor.badges;
+				}
 				if (!customEditor.onExtensionShortcut) {
 					customEditor.onExtensionShortcut = (data: string) => this.defaultEditor.onExtensionShortcut?.(data);
 				}
@@ -3375,6 +3400,9 @@ export class InteractiveMode {
 
 		switch (event.type) {
 			case "agent_start":
+				this.responseTimer.start(performance.now());
+				this.responseFailed = false;
+				this.responseTicker ??= setInterval(() => this.ui.requestRender(), 1000);
 				this.pendingTools.clear();
 				// Restore main escape handler if retry handler is still active
 				// (retry success event fires later, but we need main handler now)
@@ -3521,6 +3549,9 @@ export class InteractiveMode {
 
 			case "message_end":
 				if (event.message.role === "user") break;
+				if (event.message.role === "assistant") {
+					this.responseFailed = event.message.stopReason === "error" || event.message.stopReason === "aborted";
+				}
 				if (this.streamingComponent && event.message.role === "assistant") {
 					this.streamingMessage = event.message;
 					let errorMessage: string | undefined;
@@ -3630,6 +3661,10 @@ export class InteractiveMode {
 				break;
 
 			case "agent_settled":
+				this.responseTimer.finish(performance.now(), !event.aborted && !this.responseFailed);
+				clearInterval(this.responseTicker);
+				this.responseTicker = undefined;
+				this.ui.requestRender();
 				await this.checkShutdownRequested();
 				break;
 
@@ -4195,6 +4230,7 @@ export class InteractiveMode {
 	}
 
 	renderInitialMessages(): void {
+		this.responseTimer.reset();
 		const entries = this.sessionManager.buildContextEntries();
 		this.renderSessionEntries(entries, {
 			updateFooter: true,
@@ -4503,12 +4539,7 @@ export class InteractiveMode {
 	}
 
 	private updateEditorBorderColor(): void {
-		if (this.isBashMode) {
-			this.editor.borderColor = theme.getBashModeBorderColor();
-		} else {
-			const level = this.session.thinkingLevel || "off";
-			this.editor.borderColor = theme.getThinkingBorderColor(level);
-		}
+		this.editor.borderColor = this.isBashMode ? theme.getBashModeBorderColor() : (text) => theme.fg("text", text);
 		this.activeStatusIndicator?.invalidate();
 		this.ui.requestRender();
 	}
@@ -7037,6 +7068,7 @@ export class InteractiveMode {
 		this.themeController.disableAutoSync();
 		this.clearExtensionTerminalInputListeners();
 		this.footer.dispose();
+		clearInterval(this.responseTicker);
 		this.footerDataProvider.dispose();
 		if (this.unsubscribe) {
 			this.unsubscribe();
