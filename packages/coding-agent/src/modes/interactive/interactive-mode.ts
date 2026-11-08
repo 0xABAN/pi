@@ -1028,7 +1028,6 @@ export class InteractiveMode {
 
 		// Add header with keybindings from config (unless silenced)
 		if (this.shouldShowStartupHeader()) {
-			const showDetails = this.shouldShowStartupDetails();
 			// Built on demand so the header follows theme changes. The logo's first line carries the version,
 			// its second line the first line of key hints. Terminals that cannot render the logo get a
 			// "Pi vX" line instead, with the key hints below it.
@@ -1075,16 +1074,9 @@ export class InteractiveMode {
 					rawKeyHint("!", "bash"),
 					hint("app.tools.expand", "more"),
 				].join(theme.fg("muted", " · "));
-			const compactOnboarding = () =>
-				theme.fg(
-					"dim",
-					`Press ${keyText("app.tools.expand")} to show full startup help${showDetails ? " and loaded resources" : ""}.`,
-				);
-			const onboarding = () =>
-				theme.fg("dim", `Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`);
 			const header = new BuiltInHeader(
-				() => `${withLogo(compactInstructions())}\n${compactOnboarding()}\n\n${onboarding()}`,
-				() => `${withLogo(expandedInstructions())}\n\n${onboarding()}`,
+				() => withLogo(compactInstructions()),
+				() => withLogo(expandedInstructions()),
 				this.getStartupExpansionState(),
 				1,
 				0,
