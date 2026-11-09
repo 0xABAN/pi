@@ -167,6 +167,7 @@ import {
 } from "./components/oauth-selector.ts";
 import { piLogoLines, piWordmark, supportsPiLogo } from "./components/pi-logo.ts";
 import { createLoginMenuSelector } from "./components/radius-login-selector.ts";
+import { GLINT_FRAME_MS, referenceGlint } from "./components/reference-glint.ts";
 import { ScopedModelsSelectorComponent } from "./components/scoped-models-selector.ts";
 import { SessionSelectorComponent } from "./components/session-selector.ts";
 import { SettingsSelectorComponent } from "./components/settings-selector.ts";
@@ -472,14 +473,18 @@ export class InteractiveMode {
 			end: match.index + match[0].length,
 		}));
 
-		return [...skills, ...files]
-			.sort((a, b) => a.start - b.start)
-			.map(({ start, end }) => ({
-				start,
-				end,
-				style: (text: string) => theme.fg("mdHeading", text),
-			}));
+		const references = [...skills, ...files].sort((a, b) => a.start - b.start);
+		if (references.length > 0) this.keepGlinting();
+
+		const elapsedMs = performance.now();
+		return references.map(({ start, end }) => ({
+			start,
+			end,
+			style: (text: string) => referenceGlint(text, elapsedMs),
+		}));
 	};
+	private glintTicker: ReturnType<typeof setInterval> | undefined;
+	private glintedAt = 0;
 	private autocompleteProviderWrappers: AutocompleteProviderFactory[] = [];
 	private fdPath: string | undefined;
 	private editorContainer: Container;
@@ -7053,6 +7058,19 @@ export class InteractiveMode {
 		}
 	}
 
+	private keepGlinting(): void {
+		this.glintedAt = performance.now();
+		this.glintTicker ??= setInterval(() => {
+			if (performance.now() - this.glintedAt < GLINT_FRAME_MS * 2) {
+				this.ui.requestRender();
+				return;
+			}
+
+			clearInterval(this.glintTicker);
+			this.glintTicker = undefined;
+		}, GLINT_FRAME_MS);
+	}
+
 	stop(fullscreenExitOutput = this.settingsManager.getFullscreenExitOutput()): void {
 		this.disposeActiveSelector();
 		if (this.settingsManager.getShowTerminalProgress()) {
@@ -7063,6 +7081,7 @@ export class InteractiveMode {
 		this.clearExtensionTerminalInputListeners();
 		this.footer.dispose();
 		clearInterval(this.responseTicker);
+		clearInterval(this.glintTicker);
 		this.footerDataProvider.dispose();
 		if (this.unsubscribe) {
 			this.unsubscribe();
