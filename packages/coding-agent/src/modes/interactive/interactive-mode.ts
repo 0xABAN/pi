@@ -474,14 +474,13 @@ export class InteractiveMode {
 		}));
 
 		const references = [...skills, ...files].sort((a, b) => a.start - b.start);
-		const isFinished = (end: number) => end < line.length;
-		if (references.some(({ end }) => isFinished(end))) this.keepGlinting();
+		if (references.some(({ end }) => end < line.length)) this.keepGlinting();
 
-		const elapsedMs = performance.now();
 		return references.map(({ start, end }) => ({
 			start,
 			end,
-			style: (text: string) => (isFinished(end) ? referenceGlint(text, elapsedMs) : theme.fg("mdHeading", text)),
+			style: (text: string) =>
+				end < line.length ? referenceGlint(text, performance.now()) : theme.fg("mdHeading", text),
 		}));
 	};
 	private glintTicker: ReturnType<typeof setInterval> | undefined;
@@ -7062,13 +7061,7 @@ export class InteractiveMode {
 	private keepGlinting(): void {
 		this.glintedAt = performance.now();
 		this.glintTicker ??= setInterval(() => {
-			if (performance.now() - this.glintedAt < GLINT_FRAME_MS * 2) {
-				this.ui.requestRender();
-				return;
-			}
-
-			clearInterval(this.glintTicker);
-			this.glintTicker = undefined;
+			if (performance.now() - this.glintedAt < GLINT_FRAME_MS * 2) this.ui.requestRender();
 		}, GLINT_FRAME_MS);
 	}
 

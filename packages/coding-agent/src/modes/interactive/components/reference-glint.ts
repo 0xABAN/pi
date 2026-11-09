@@ -9,8 +9,7 @@ const PAUSE_CHARS = 18;
 
 export function referenceGlint(text: string, elapsedMs: number): string {
 	const chars = [...text];
-	const cycle = chars.length + PAUSE_CHARS;
-	const glintAt = (((elapsedMs / 1000) * CHARS_PER_SECOND) % cycle) - GLINT_WIDTH;
+	const glintAt = (((elapsedMs / 1000) * CHARS_PER_SECOND) % (chars.length + PAUSE_CHARS)) - GLINT_WIDTH;
 	const { mdHeading, text: beige } = theme.colors;
 
 	const painted = chars.map((char, index) => {
