@@ -467,13 +467,13 @@ export class InteractiveMode {
 	private editorComponentFactory: EditorFactory | undefined;
 	private autocompleteProvider: AutocompleteProvider | undefined;
 	private readonly editorHighlighter: EditorHighlighter = (line) => {
-		const skills = findSkillReferences(line, this.session.resourceLoader.getSkills().skills);
+		const commands = findSkillReferences(line, this.slashCommands);
 		const files = [...line.matchAll(/(?<!\S)@(?:"[^"]*"|\S+)/g)].map((match) => ({
 			start: match.index,
 			end: match.index + match[0].length,
 		}));
 
-		const references = [...skills, ...files].sort((a, b) => a.start - b.start);
+		const references = [...commands, ...files].sort((a, b) => a.start - b.start);
 		if (references.some(({ end }) => end < line.length)) this.keepGlinting();
 
 		return references.map(({ start, end }) => ({
@@ -485,6 +485,7 @@ export class InteractiveMode {
 	};
 	private glintTicker: ReturnType<typeof setInterval> | undefined;
 	private glintedAt = 0;
+	private slashCommands: SlashCommand[] = [];
 	private autocompleteProviderWrappers: AutocompleteProviderFactory[] = [];
 	private fdPath: string | undefined;
 	private editorContainer: Container;
@@ -834,11 +835,8 @@ export class InteractiveMode {
 			inline: true,
 		}));
 
-		return new CombinedAutocompleteProvider(
-			[...skillCommandList, ...templateCommands, ...extensionCommands, ...slashCommands],
-			this.sessionManager.getCwd(),
-			this.fdPath,
-		);
+		this.slashCommands = [...skillCommandList, ...templateCommands, ...extensionCommands, ...slashCommands];
+		return new CombinedAutocompleteProvider(this.slashCommands, this.sessionManager.getCwd(), this.fdPath);
 	}
 
 	private setupAutocompleteProvider(): void {

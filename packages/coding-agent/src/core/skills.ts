@@ -387,13 +387,16 @@ export function formatSkillsForPrompt(skills: Skill[], fileReadTool: "read" | "b
 	return lines.join("\n");
 }
 
-export interface SkillReference {
-	skill: Skill;
+export interface SkillReference<T = Skill> {
+	skill: T;
 	start: number;
 	end: number;
 }
 
-export function findSkillReferences(text: string, skills: readonly Skill[]): SkillReference[] {
+export function findSkillReferences<T extends { name: string }>(
+	text: string,
+	skills: readonly T[],
+): SkillReference<T>[] {
 	const byName = new Map(skills.map((skill) => [skill.name, skill]));
 	return [...text.matchAll(/(?<!\S)\/(\S+?)(?=[.,;:!?)]*(?:\s|$))/g)].flatMap((match) => {
 		const skill = byName.get(match[1]!);
