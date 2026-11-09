@@ -474,13 +474,14 @@ export class InteractiveMode {
 		}));
 
 		const references = [...skills, ...files].sort((a, b) => a.start - b.start);
-		if (references.length > 0) this.keepGlinting();
+		const isFinished = (end: number) => end < line.length;
+		if (references.some(({ end }) => isFinished(end))) this.keepGlinting();
 
 		const elapsedMs = performance.now();
 		return references.map(({ start, end }) => ({
 			start,
 			end,
-			style: (text: string) => referenceGlint(text, elapsedMs),
+			style: (text: string) => (isFinished(end) ? referenceGlint(text, elapsedMs) : theme.fg("mdHeading", text)),
 		}));
 	};
 	private glintTicker: ReturnType<typeof setInterval> | undefined;
