@@ -465,12 +465,21 @@ export class InteractiveMode {
 	private editor: ActiveEditor;
 	private editorComponentFactory: EditorFactory | undefined;
 	private autocompleteProvider: AutocompleteProvider | undefined;
-	private readonly editorHighlighter: EditorHighlighter = (line) =>
-		findSkillReferences(line, this.session.resourceLoader.getSkills().skills).map(({ start, end }) => ({
-			start,
-			end,
-			style: (text: string) => theme.fg("customMessageLabel", text),
+	private readonly editorHighlighter: EditorHighlighter = (line) => {
+		const skills = findSkillReferences(line, this.session.resourceLoader.getSkills().skills);
+		const files = [...line.matchAll(/(?<!\S)@(?:"[^"]*"|\S+)/g)].map((match) => ({
+			start: match.index,
+			end: match.index + match[0].length,
 		}));
+
+		return [...skills, ...files]
+			.sort((a, b) => a.start - b.start)
+			.map(({ start, end }) => ({
+				start,
+				end,
+				style: (text: string) => theme.fg("mdHeading", text),
+			}));
+	};
 	private autocompleteProviderWrappers: AutocompleteProviderFactory[] = [];
 	private fdPath: string | undefined;
 	private editorContainer: Container;
