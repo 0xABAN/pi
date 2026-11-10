@@ -264,7 +264,8 @@ describe("building a facet: the import table", () => {
 			buildFacet(plugins.find((each) => each.name === name)!, "worker", { ...NODE, plugins }, context);
 		const user = await build("@test/user");
 		if (user.kind === "failed") throw new Error(user.errors.join("\n"));
-		expect(user.copied.map((file) => file.slice(second.length + 1)).sort()).toEqual([
+		const secondReal = await realpath(second);
+		expect(user.copied.map((file) => file.slice(secondReal.length + 1)).sort()).toEqual([
 			"elsewhere/contract.ts",
 			"elsewhere/other.ts",
 		]);
