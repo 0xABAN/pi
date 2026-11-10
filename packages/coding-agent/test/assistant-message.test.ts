@@ -1,5 +1,5 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import type { TuiMouseEvent } from "@earendil-works/pi-tui";
+import { resetCapabilitiesCache, setCapabilities, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
 import { UserMessageComponent } from "../src/modes/interactive/components/user-message.ts";
@@ -35,7 +35,10 @@ function createAssistantMessage(
 }
 
 describe("AssistantMessageComponent", () => {
-	afterEach(() => vi.restoreAllMocks());
+	afterEach(() => {
+		vi.restoreAllMocks();
+		resetCapabilitiesCache();
+	});
 
 	test("reuses its Markdown across streaming and its end, and renders like a new component after a theme change", () => {
 		initTheme("dark");
@@ -107,6 +110,7 @@ describe("AssistantMessageComponent", () => {
 	});
 
 	test("draws thinking Markdown in the thinking color with its text intact", () => {
+		setCapabilities({ images: null, trueColor: true, hyperlinks: false });
 		initTheme("dark");
 		const thinking = [
 			"## Plan",

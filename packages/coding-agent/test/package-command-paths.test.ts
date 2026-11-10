@@ -140,6 +140,7 @@ if (process.platform !== "win32") fs.chmodSync(piPath, 0o755);
 		agentDir = join(tempDir, "agent");
 		projectDir = join(tempDir, "project");
 		packageDir = join(tempDir, "local-package");
+		vi.stubEnv("HOME", tempDir);
 		mkdirSync(agentDir, { recursive: true });
 		mkdirSync(projectDir, { recursive: true });
 		mkdirSync(packageDir, { recursive: true });

@@ -22,6 +22,7 @@ describe("DefaultResourceLoader", () => {
 		tempDir = join(tmpdir(), `rl-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		agentDir = join(tempDir, "agent");
 		cwd = join(tempDir, "project");
+		vi.stubEnv("HOME", tempDir);
 		mkdirSync(agentDir, { recursive: true });
 		mkdirSync(cwd, { recursive: true });
 	});
