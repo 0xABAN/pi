@@ -21,7 +21,11 @@ export interface ChatViewport {
 
 /** Shared fullscreen transcript and fixed input-dock layout. */
 export function createChatViewport(options: ChatViewportOptions): ChatViewport {
-	const transcript = new ScrollView(options.document, {
+	const content = new VStack([
+		{ component: options.document, shrink: 1, minSize: 0 },
+		...(options.widgetsAbove === undefined ? [] : [{ component: options.widgetsAbove, shrink: 1, minSize: 0 }]),
+	]);
+	const transcript = new ScrollView(content, {
 		follow: "end",
 		primary: true,
 		overscroll: "chain",
@@ -31,7 +35,6 @@ export function createChatViewport(options: ChatViewportOptions): ChatViewport {
 	});
 	const dock = new VStack([
 		{ component: options.pendingMessages, shrink: 1, minSize: 0 },
-		...(options.widgetsAbove === undefined ? [] : [{ component: options.widgetsAbove, shrink: 1, minSize: 0 }]),
 		{ component: options.status, shrink: 1, minSize: 0 },
 		{ component: options.editor, shrink: 1, minSize: 3 },
 		{ component: options.footer, shrink: 1, minSize: 0 },
