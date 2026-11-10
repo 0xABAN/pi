@@ -8,7 +8,7 @@
  * like any other tool change and survives `/tree`, resume, and fork on that branch.
  */
 
-import { type Static, Type } from "typebox";
+import { Type } from "typebox";
 import type {
 	ExtensionAPI,
 	ToolDefinition,
@@ -255,8 +255,6 @@ export const toolSearchSchema = Type.Object({
 		Type.Number({ description: `Maximum number of tools to return. Defaults to ${DEFAULT_TOOL_SEARCH_LIMIT}.` }),
 	),
 });
-
-export type ToolSearchInput = Static<typeof toolSearchSchema>;
 
 export interface ToolSearchResultTool {
 	name: string;
