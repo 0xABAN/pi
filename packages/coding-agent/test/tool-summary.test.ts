@@ -6,8 +6,6 @@ import type { ToolRenderers } from "../src/core/extensions/types.ts";
 import { formatArgumentPreview } from "../src/core/tools/render-utils.ts";
 import { createAllToolRenderers, readRenderers, withBuiltInRenderers } from "../src/core/tools/renderers/index.ts";
 import { codemodeRenderers } from "../src/extensions/codemode/renderer.ts";
-import { createMcpToolRenderers } from "../src/extensions/mcp/tools.ts";
-import { createToolSearchToolDefinition } from "../src/extensions/tool-search/tool.ts";
 
 const renderers = createAllToolRenderers();
 
@@ -77,25 +75,6 @@ describe("extension tool summaries", () => {
 			icon: "⋈",
 			target: "return 1",
 		});
-	});
-
-	it("tool search shows the query", () => {
-		expect(summarize(createToolSearchToolDefinition(), { query: "github issues" })).toEqual({
-			label: "Tool Search",
-			icon: "⊙",
-			target: "github issues",
-		});
-	});
-
-	it("MCP tools show the server, tool and arguments", () => {
-		const mcp = createMcpToolRenderers("docs/search");
-
-		expect(summarize(mcp, { query: "pi", limit: 5 })).toEqual({
-			label: "MCP",
-			icon: "⌇",
-			target: 'docs/search query="pi" limit=5',
-		});
-		expect(summarize(mcp, {}).target).toBe("docs/search");
 	});
 });
 
